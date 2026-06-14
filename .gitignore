@@ -1,0 +1,20 @@
+# Thư mục build của Java
+**/target/
+*.jar
+*.war
+
+# Thư mục build của Node/React
+**/node_modules/
+**/dist/
+
+# File cấu hình IDE và hệ thống
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# File chứa key bảo mật
+.env
+*.env
+.env.*
