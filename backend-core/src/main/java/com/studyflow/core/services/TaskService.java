@@ -59,7 +59,8 @@ public class TaskService {
         task.setIsAiGenerated(false);
         task.setOrderIndex(request.orderIndex() != null ? request.orderIndex() : 0);
 
-        return TaskResponse.from(taskRepository.save(task));
+        Task savedTask = taskRepository.saveAndFlush(task);
+        return TaskResponse.from(savedTask);
     }
 
     @Transactional(readOnly = true)
@@ -133,7 +134,8 @@ public class TaskService {
             task.setOrderIndex(request.orderIndex());
         }
 
-        return TaskResponse.from(taskRepository.save(task));
+        Task savedTask = taskRepository.saveAndFlush(task);
+        return TaskResponse.from(savedTask);
     }
 
     @Transactional

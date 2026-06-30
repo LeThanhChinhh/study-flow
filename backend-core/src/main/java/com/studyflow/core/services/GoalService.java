@@ -42,7 +42,8 @@ public class GoalService {
         goal.setDeadline(request.deadline());
         goal.setStatus("IN_PROGRESS");
 
-        return GoalResponse.from(goalRepository.save(goal));
+        Goal savedGoal = goalRepository.saveAndFlush(goal);
+        return GoalResponse.from(savedGoal);
     }
 
     @Transactional(readOnly = true)
@@ -86,7 +87,8 @@ public class GoalService {
             goal.setStatus(request.status());
         }
 
-        return GoalResponse.from(goalRepository.save(goal));
+        Goal savedGoal = goalRepository.saveAndFlush(goal);
+        return GoalResponse.from(savedGoal);
     }
 
     @Transactional
