@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface PomodoroLogRepository extends JpaRepository<PomodoroLog, UUID> {
     List<PomodoroLog> findByTaskIdAndTaskUserId(UUID taskId, UUID userId);
+    List<PomodoroLog> findByTaskUserId(UUID userId);
 }

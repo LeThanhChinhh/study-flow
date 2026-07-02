@@ -4,6 +4,7 @@ import com.studyflow.core.dtos.pomodoro.PomodoroLogRequest;
 import com.studyflow.core.dtos.pomodoro.PomodoroLogResponse;
 import com.studyflow.core.entities.PomodoroLog;
 import com.studyflow.core.entities.Task;
+import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.PomodoroLogRepository;
 import com.studyflow.core.repositories.TaskRepository;
 import org.springframework.security.core.Authentication;
@@ -13,10 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class PomodoroLogService {
+
+    private static final Set<String> VALID_STATUSES = Set.of(
+            "IN_PROGRESS",
+            "COMPLETED",
+            "ABORTED"
+    );
 
     private final PomodoroLogRepository pomodoroLogRepository;
     private final TaskRepository taskRepository;
@@ -31,17 +39,20 @@ public class PomodoroLogService {
 
     @Transactional
     public PomodoroLogResponse createPomodoroLog(PomodoroLogRequest request) {
-        UUID userId = getCurrentUserId();
-        Task task = taskRepository.findByIdAndUserId(request.getTaskId(), userId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Task không tồn tại hoặc không thuộc user hiện tại")
-                );
-
         validateRequest(request);
+
+        UUID userId = getCurrentUserId();
+
+        Task task = taskRepository.findByIdAndUserId(request.getTaskId(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        Integer focusMinutes = request.getFocusMinutes();
+        Integer breakMinutes = request.getBreakMinutes() == null ? 0 : request.getBreakMinutes();
+        Integer pauseCount = request.getPauseCount() == null ? 0 : request.getPauseCount();
+        String status = request.getStatus() == null ? "COMPLETED" : request.getStatus();
 
         OffsetDateTime startTime = request.getStartTime();
         OffsetDateTime endTime = request.getEndTime();
-        Integer focusMinutes = request.getFocusMinutes();
 
         if (startTime == null && endTime == null) {
             endTime = OffsetDateTime.now();
@@ -57,10 +68,23 @@ public class PomodoroLogService {
         log.setStartTime(startTime);
         log.setEndTime(endTime);
         log.setFocusMinutes(focusMinutes);
-        log.setStatus(request.getStatus());
+        log.setBreakMinutes(breakMinutes);
+        log.setPauseCount(pauseCount);
+        log.setStatus(status);
 
-        PomodoroLog savedLog = pomodoroLogRepository.save(log);
+        PomodoroLog savedLog = pomodoroLogRepository.saveAndFlush(log);
+
         return toResponse(savedLog);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PomodoroLogResponse> getCurrentUserLogs() {
+        UUID userId = getCurrentUserId();
+
+        return pomodoroLogRepository.findByTaskUserId(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -68,9 +92,7 @@ public class PomodoroLogService {
         UUID userId = getCurrentUserId();
 
         taskRepository.findByIdAndUserId(taskId, userId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Task không tồn tại hoặc không thuộc user hiện tại")
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         return pomodoroLogRepository.findByTaskIdAndTaskUserId(taskId, userId)
                 .stream()
@@ -79,12 +101,24 @@ public class PomodoroLogService {
     }
 
     private void validateRequest(PomodoroLogRequest request) {
-        if (request.getFocusMinutes() == null || request.getFocusMinutes() <= 0) {
-            throw new IllegalArgumentException("focusMinutes phải lớn hơn 0");
+        if (request.getTaskId() == null) {
+            throw new IllegalArgumentException("taskId is required");
         }
 
-        if (request.getTaskId() == null) {
-            throw new IllegalArgumentException("taskId là bắt buộc");
+        if (request.getFocusMinutes() == null || request.getFocusMinutes() <= 0) {
+            throw new IllegalArgumentException("focusMinutes must be greater than 0");
+        }
+
+        if (request.getBreakMinutes() != null && request.getBreakMinutes() < 0) {
+            throw new IllegalArgumentException("breakMinutes must be greater than or equal to 0");
+        }
+
+        if (request.getPauseCount() != null && request.getPauseCount() < 0) {
+            throw new IllegalArgumentException("pauseCount must be greater than or equal to 0");
+        }
+
+        if (request.getStatus() != null && !VALID_STATUSES.contains(request.getStatus())) {
+            throw new IllegalArgumentException("Invalid pomodoro status");
         }
     }
 
@@ -92,15 +126,10 @@ public class PomodoroLogService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalArgumentException("User chưa xác thực");
+            throw new IllegalArgumentException("Unauthenticated");
         }
 
-        String name = authentication.getName();
-        if (name == null || name.isEmpty()) {
-            throw new IllegalArgumentException("Cannot get userId from token");
-        }
-
-        return UUID.fromString(name);
+        return UUID.fromString(authentication.getName());
     }
 
     private PomodoroLogResponse toResponse(PomodoroLog entity) {
@@ -110,6 +139,8 @@ public class PomodoroLogService {
         response.setStartTime(entity.getStartTime());
         response.setEndTime(entity.getEndTime());
         response.setFocusMinutes(entity.getFocusMinutes());
+        response.setBreakMinutes(entity.getBreakMinutes());
+        response.setPauseCount(entity.getPauseCount());
         response.setStatus(entity.getStatus());
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());

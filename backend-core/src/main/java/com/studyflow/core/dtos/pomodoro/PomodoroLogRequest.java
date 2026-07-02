@@ -10,6 +10,8 @@ public class PomodoroLogRequest {
     private OffsetDateTime endTime;
     private Integer focusMinutes;
     private String status;
+    private Integer breakMinutes;
+    private Integer pauseCount;
 
     public UUID getTaskId() {
         return taskId;
@@ -41,6 +43,22 @@ public class PomodoroLogRequest {
 
     public void setFocusMinutes(Integer focusMinutes) {
         this.focusMinutes = focusMinutes;
+    }
+
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
+    }
+
+    public Integer getPauseCount() {
+        return pauseCount;
+    }
+
+    public void setPauseCount(Integer pauseCount) {
+        this.pauseCount = pauseCount;
     }
 
     public String getStatus() {

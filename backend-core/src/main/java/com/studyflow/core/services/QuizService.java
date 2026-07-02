@@ -46,6 +46,13 @@ public class QuizService {
         Task task = taskRepository.findByIdAndUserId(taskId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Task không tồn tại hoặc không thuộc quyền sở hữu"));
 
+        List<Quiz> existingQuizzes = quizRepository.findByTaskId(taskId);
+        if (!existingQuizzes.isEmpty()) {
+            return existingQuizzes.stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+
         List<QuizResponse> quizDtos = new ArrayList<>();
 
         for (int i = 1; i <= 2; i++) {
@@ -117,6 +124,10 @@ public class QuizService {
             answerOptionIds.add(answer.selectedOptionId());
         }
 
+        if (quizIds.size() != answers.size()) {
+            throw new IllegalArgumentException("Duplicate quizId is not allowed");
+        }
+
         List<Quiz> quizzes = quizRepository.findAllById(quizIds);
         if (quizzes.size() != quizIds.size()) {
             throw new IllegalArgumentException("Một hoặc nhiều quizId không hợp lệ.");
@@ -156,7 +167,9 @@ public class QuizService {
         }
 
         int totalQuestions = answers.size();
-        int score = totalQuestions > 0 ? (int) (correctCount * 100 / totalQuestions) : 0;
+        int scorePercent = totalQuestions > 0
+                ? (int) Math.round(correctCount * 100.0 / totalQuestions)
+                : 0;
 
         // 3. Lưu mỗi câu trả lời dưới dạng một QuizAttempt riêng biệt [9, 10]
         for (QuizSubmitRequest.AnswerDTO answer : answers) {
@@ -181,9 +194,22 @@ public class QuizService {
             completedTask = true;
         }
 
-        return new QuizSubmitResponse(totalQuestions, (int) correctCount, score, completedTask);
+        return new QuizSubmitResponse(totalQuestions, (int) correctCount, scorePercent, completedTask);
     }
 
+    private QuizResponse toResponse(Quiz quiz) {
+        List<QuizOptionResponse> optionResponses = quizOptionRepository.findByQuizId(quiz.getId())
+                .stream()
+                .map(option -> new QuizOptionResponse(option.getId(), option.getText()))
+                .toList();
+
+        return new QuizResponse(
+                quiz.getId(),
+                quiz.getTask().getId(),
+                quiz.getQuestionText(),
+                optionResponses
+        );
+    }
     /**
      * Hỗ trợ lấy UserId hiện tại từ JWT Token [6]
      */

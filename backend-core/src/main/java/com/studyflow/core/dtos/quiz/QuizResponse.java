@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record QuizResponse(
-    UUID id,
+    UUID quizId,
     UUID taskId,
     String questionText,
     List<QuizOptionResponse> options

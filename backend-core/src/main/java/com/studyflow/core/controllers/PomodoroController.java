@@ -3,10 +3,10 @@ package com.studyflow.core.controllers;
 import com.studyflow.core.dtos.pomodoro.PomodoroLogRequest;
 import com.studyflow.core.dtos.pomodoro.PomodoroLogResponse;
 import com.studyflow.core.services.PomodoroLogService;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,18 +21,22 @@ public class PomodoroController {
     }
 
     @PostMapping("/log")
-    public ResponseEntity<PomodoroLogResponse> createPomodoroLog(
+    @ResponseStatus(HttpStatus.CREATED)
+    public PomodoroLogResponse createPomodoroLog(
             @Valid @RequestBody PomodoroLogRequest request
     ) {
-        PomodoroLogResponse response = pomodoroLogService.createPomodoroLog(request);
-        return ResponseEntity.ok(response);
+        return pomodoroLogService.createPomodoroLog(request);
+    }
+
+    @GetMapping("/logs")
+    public List<PomodoroLogResponse> getCurrentUserLogs() {
+        return pomodoroLogService.getCurrentUserLogs();
     }
 
     @GetMapping("/logs/by-task/{taskId}")
-    public ResponseEntity<List<PomodoroLogResponse>> getLogsByTask(
+    public List<PomodoroLogResponse> getLogsByTask(
             @PathVariable UUID taskId
     ) {
-        List<PomodoroLogResponse> logs = pomodoroLogService.getLogsByTask(taskId);
-        return ResponseEntity.ok(logs);
+        return pomodoroLogService.getLogsByTask(taskId);
     }
 }

@@ -25,6 +25,12 @@ public class PomodoroLog extends BaseEntity {
     @Column(name = "focus_minutes", nullable = false)
     private Integer focusMinutes;
 
+    @Column(name = "break_minutes", nullable = false)
+    private Integer breakMinutes = 0;
+
+    @Column(name = "pause_count", nullable = false)
+    private Integer pauseCount = 0;
+
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
@@ -66,6 +72,22 @@ public class PomodoroLog extends BaseEntity {
 
     public void setFocusMinutes(Integer focusMinutes) {
         this.focusMinutes = focusMinutes;
+    }
+
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
+    }
+
+    public Integer getPauseCount() {
+        return pauseCount;
+    }
+
+    public void setPauseCount(Integer pauseCount) {
+        this.pauseCount = pauseCount;
     }
 
     public String getStatus() {

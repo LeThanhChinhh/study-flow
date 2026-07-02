@@ -13,6 +13,8 @@ public class PomodoroLogResponse {
     private String status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private Integer breakMinutes;
+    private Integer pauseCount;
 
     public UUID getId() {
         return id;
@@ -68,6 +70,22 @@ public class PomodoroLogResponse {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
+    }
+
+    public Integer getPauseCount() {
+        return pauseCount;
+    }
+
+    public void setPauseCount(Integer pauseCount) {
+        this.pauseCount = pauseCount;
     }
 
     public OffsetDateTime getUpdatedAt() {
