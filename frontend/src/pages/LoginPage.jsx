@@ -1,20 +1,41 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import AuthLayout from '../layouts/AuthLayout'
 import StudyIcon from '../components/StudyIcon'
+import { useAuth } from '../auth/AuthContext'
 
 /* ─── LoginPage ────────────────────────────────────────────── */
 const LoginPage = () => {
+  const navigate = useNavigate()
+  const { login, isLoading, error, clearError } = useAuth()
+  
   const [formData, setFormData]         = useState({ identifier: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
+  const [localError, setLocalError]     = useState(null)
 
-  const handleChange = (e) =>
+  useEffect(() => {
+    clearError()
+  }, [clearError])
+
+  const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    if (error) clearError()
+    if (localError) setLocalError(null)
+  }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // TODO Step 2 – POST /api/v1/auth/login { identifier, password }
-    console.log('[LoginPage] submit:', formData)
+    if (!formData.identifier || !formData.password) {
+      setLocalError("Please enter both identifier and password.")
+      return
+    }
+    
+    try {
+      await login(formData)
+      navigate('/dashboard')
+    } catch (err) {
+      // Error is handled by AuthContext and available via 'error' variable
+    }
   }
 
   return (
@@ -26,6 +47,14 @@ const LoginPage = () => {
         </h1>
         <p className="text-stone-500 text-sm">Continue your learning flow.</p>
       </header>
+
+      {/* ── Error Banner ── */}
+      {(error || localError) && (
+        <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
+          <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
+          <span>{localError || error}</span>
+        </div>
+      )}
 
       {/* ── Form ── */}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -92,8 +121,8 @@ const LoginPage = () => {
 
         {/* Submit */}
         <div className="pt-1">
-          <button id="login-submit-btn" type="submit" className="btn-primary">
-            Continue learning
+          <button id="login-submit-btn" type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading ? 'Signing in...' : 'Continue learning'}
           </button>
         </div>
       </form>

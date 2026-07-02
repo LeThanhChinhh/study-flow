@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import StudyIcon, { IconBadge } from '../components/StudyIcon'
+import { useAuth } from '../auth/AuthContext'
 
 /* MOCK DATA */
 const MOCK_USER        = { name: 'Alex', initials: 'A', goal: 'CS Fundamentals' }
@@ -44,7 +45,7 @@ const ACTIVE_TASK     = MOCK_TASKS.find((t) => t.status === 'active')
 /*SUB-COMPONENTS*/
 
 /*  App navigation  */
-const AppNav = () => (
+const AppNav = ({ user, onLogout }) => (
   <nav id="dashboard-nav" className="bg-white border-b border-stone-100 sticky top-0 z-20">
     <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
 
@@ -59,7 +60,7 @@ const AppNav = () => (
       {/* Current goal chip */}
       <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 rounded-full border border-violet-100">
         <StudyIcon name="target" size={13} className="text-violet-500" />
-        <span className="text-xs font-medium text-violet-700">{MOCK_USER.goal}</span>
+        <span className="text-xs font-medium text-violet-700">{user?.goal || MOCK_USER.goal}</span>
       </div>
 
       {/* Right side */}
@@ -67,31 +68,31 @@ const AppNav = () => (
         <div className="flex items-center gap-2 pl-3 border-l border-stone-100">
           {/* Avatar */}
           <div
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-bold select-none"
-            aria-label={`${MOCK_USER.name}'s avatar`}
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-bold select-none uppercase"
+            aria-label={`${user?.username || MOCK_USER.name}'s avatar`}
           >
-            {MOCK_USER.initials}
+            {user?.username ? user.username.charAt(0) : MOCK_USER.initials}
           </div>
           <span className="hidden sm:block text-sm font-medium text-stone-700">
-            {MOCK_USER.name}
+            {user?.username || MOCK_USER.name}
           </span>
         </div>
 
-        <Link
-          to="/login"
+        <button
+          onClick={onLogout}
           className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors"
           aria-label="Sign out"
         >
           <StudyIcon name="log-out" size={14} />
           <span className="hidden sm:block">Sign out</span>
-        </Link>
+        </button>
       </div>
     </div>
   </nav>
 )
 
 /*  Greeting section  */
-const GreetingSection = () => {
+const GreetingSection = ({ user }) => {
   const { word, icon } = getGreeting()
   return (
     <header className="mb-8 animate-slide-up">
@@ -100,7 +101,7 @@ const GreetingSection = () => {
         <p className="text-sm text-stone-500 font-medium">{TODAY_STR}</p>
       </div>
       <h1 className="text-3xl font-bold text-stone-800 tracking-tight mb-1.5">
-        {word}, {MOCK_USER.name}.
+        {word}, {user?.username || MOCK_USER.name}.
       </h1>
       <p className="text-stone-500 text-sm mb-6">
         {REMAINING_TASKS} {REMAINING_TASKS === 1 ? 'task' : 'tasks'} left today.
@@ -410,12 +411,21 @@ const QuickActionsBar = () => (
 )
 
 /* PAGE */
-const DashboardPage = () => (
-  <div className="min-h-screen bg-[#faf9f7]">
-    <AppNav />
+const DashboardPage = () => {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
-    <main className="max-w-6xl mx-auto px-6 py-10 space-y-6">
-      <GreetingSection />
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  return (
+    <div className="min-h-screen bg-[#faf9f7]">
+      <AppNav user={user} onLogout={handleLogout} />
+
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-6">
+        <GreetingSection user={user} />
 
       {/* Row 1 — Today's Flow + Focus Session */}
       <div
@@ -444,8 +454,9 @@ const DashboardPage = () => (
         <p className="text-xs text-stone-400">© 2026 StudyFlow</p>
         <p className="text-xs text-stone-300">v0.1.0</p>
       </div>
-    </footer>
-  </div>
-)
+      </footer>
+    </div>
+  )
+}
 
 export default DashboardPage

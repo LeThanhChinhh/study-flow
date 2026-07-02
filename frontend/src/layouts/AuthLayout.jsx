@@ -129,11 +129,11 @@ const AuthLayout = ({ children }) => (
 
       {/*  The Auth Card  */}
       <main
-        className="w-full bg-white rounded-[1.25rem] border border-stone-100 shadow-card-lg animate-slide-up overflow-hidden"
+        className="relative w-full bg-white rounded-[1.25rem] border border-stone-100 shadow-card-lg animate-slide-up"
         style={{ animationDelay: '0.05s' }}
       >
         {/* Very subtle top accent line */}
-        <div className="h-[3px] w-full bg-gradient-to-r from-violet-400 via-indigo-400 to-violet-300" />
+        <div className="absolute top-0 left-0 h-[3px] w-full rounded-t-[1.25rem] bg-gradient-to-r from-violet-400 via-indigo-400 to-violet-300" />
         
         <div className="px-8 py-8 sm:px-10 sm:py-9">
           {children}

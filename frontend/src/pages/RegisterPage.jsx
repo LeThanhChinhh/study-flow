@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import AuthLayout from '../layouts/AuthLayout'
 import StudyIcon from '../components/StudyIcon'
+import { useAuth } from '../auth/AuthContext'
 
 /*  Password strength helper  */
 const getStrength = (pw) => {
@@ -22,24 +23,60 @@ const getStrength = (pw) => {
 
 /*  RegisterPage  */
 const RegisterPage = () => {
+  const navigate = useNavigate()
+  const { register, isLoading, error, clearError } = useAuth()
+  
   const [formData, setFormData]       = useState({
     username: '', email: '', password: '', confirmPassword: '',
   })
   const [showPw,      setShowPw]      = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [pwFocused, setPwFocused]     = useState(false)
+  const [localError, setLocalError]   = useState(null)
+
+  useEffect(() => {
+    clearError()
+  }, [clearError])
 
   const strength = getStrength(formData.password)
   const mismatch =
     formData.confirmPassword.length > 0 &&
     formData.confirmPassword !== formData.password
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    if (error) clearError()
+    if (localError) setLocalError(null)
+  }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (mismatch) {
+      setLocalError("Passwords do not match.")
+      return
+    }
+    
+    if (!formData.username || !formData.email || !formData.password) {
+      setLocalError("Please fill in all fields.")
+      return
+    }
+    
     const { confirmPassword: _omit, ...payload } = formData
-    console.log('[RegisterPage] submit payload:', payload)
+    
+    try {
+      const data = await register(payload)
+      // Navigate based on whether the API logs us in automatically
+      // Usually if accessToken is returned, we are logged in.
+      // If not, we might navigate to login. Let's just go to dashboard if token exists, else login.
+      if (data && data.accessToken) {
+        navigate('/dashboard')
+      } else {
+        navigate('/login')
+      }
+    } catch (err) {
+      // Error handled by AuthContext
+    }
   }
 
   return (
@@ -53,6 +90,14 @@ const RegisterPage = () => {
           Start planning smarter study sessions.
         </p>
       </header>
+
+      {/* ── Error Banner ── */}
+      {(error || localError) && (
+        <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
+          <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
+          <span>{localError || error}</span>
+        </div>
+      )}
 
       {/*  Form  */}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -108,6 +153,40 @@ const RegisterPage = () => {
             Password
           </label>
           <div className="relative">
+            {/* Password Policy Tooltip (Left Side) */}
+            <div
+              className={`absolute top-0 right-[calc(100%+1.5rem)] w-[240px] p-4 bg-white border border-stone-100 shadow-card-lg rounded-2xl transition-all duration-300 z-30 hidden md:block ${
+                pwFocused || (formData.password.length > 0 && strength?.label !== 'Strong')
+                  ? 'opacity-100 translate-x-0 pointer-events-auto'
+                  : 'opacity-0 translate-x-4 pointer-events-none'
+              }`}
+            >
+              <h4 className="text-[11px] font-bold text-stone-800 mb-3 tracking-widest uppercase">
+                Password rules
+              </h4>
+              <ul className="space-y-2.5">
+                {[
+                  { id: 'len', label: 'At least 8 characters', valid: formData.password.length >= 8 },
+                  { id: 'up', label: 'One uppercase letter', valid: /[A-Z]/.test(formData.password) },
+                  { id: 'num', label: 'One number', valid: /[0-9]/.test(formData.password) },
+                  { id: 'sp', label: 'One special character', valid: /[^A-Za-z0-9]/.test(formData.password) },
+                ].map(req => (
+                  <li key={req.id} className="flex items-start gap-2.5">
+                    <div className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                      req.valid ? 'bg-emerald-500' : 'bg-stone-100 border border-stone-200'
+                    }`}>
+                      {req.valid && <StudyIcon name="check" size={8} className="text-white" strokeWidth={4} />}
+                    </div>
+                    <span className={`text-xs ${req.valid ? 'text-stone-700 font-medium' : 'text-stone-400'}`}>
+                      {req.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {/* Tooltip Arrow */}
+              <div className="absolute top-[18px] -right-[5px] w-[10px] h-[10px] bg-white border-t border-r border-stone-100 rotate-45 transform origin-center" />
+            </div>
+
             <input
               id="register-password"
               name="password"
@@ -117,6 +196,8 @@ const RegisterPage = () => {
               placeholder="Min. 8 characters"
               value={formData.password}
               onChange={handleChange}
+              onFocus={() => setPwFocused(true)}
+              onBlur={() => setPwFocused(false)}
               className="input-field pr-12"
             />
             <button
@@ -182,8 +263,8 @@ const RegisterPage = () => {
 
         {/* Submit */}
         <div className="pt-1">
-          <button id="register-submit-btn" type="submit" className="btn-primary">
-            Create account
+          <button id="register-submit-btn" type="submit" className="btn-primary" disabled={isLoading || mismatch}>
+            {isLoading ? 'Creating account...' : 'Create account'}
           </button>
         </div>
       </form>

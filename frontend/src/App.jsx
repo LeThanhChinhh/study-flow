@@ -3,18 +3,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 
-/**
- * App – Root component.
- *
- * Route map:
- *   /            → redirect to /login
- *   /login       → LoginPage
- *   /register    → RegisterPage
- *   /dashboard   → DashboardPage (placeholder for now)
- *   *            → redirect to /login (catch-all)
- *
- * NOTE: ProtectedRoute & AuthContext will be added in Step 2.
- */
+// NOTE: ProtectedRoute will be added in the next step.
 function App() {
   return (
     <BrowserRouter>
