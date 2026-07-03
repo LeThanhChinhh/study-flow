@@ -19,5 +19,5 @@ Thumbs.db
 *.env
 .env.*
 
-# file docs
-/docs
+#docs
+/docs/
