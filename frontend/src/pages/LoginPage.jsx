@@ -4,7 +4,7 @@ import AuthLayout from '../layouts/AuthLayout'
 import StudyIcon from '../components/StudyIcon'
 import { useAuth } from '../auth/AuthContext'
 
-/* ─── LoginPage ────────────────────────────────────────────── */
+/* LoginPage */
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, isLoading, error, clearError } = useAuth()
@@ -40,7 +40,7 @@ const LoginPage = () => {
 
   return (
     <AuthLayout>
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="mb-7">
         <h1 className="text-2xl font-bold text-stone-800 tracking-tight mb-1.5">
           Welcome back
@@ -48,7 +48,7 @@ const LoginPage = () => {
         <p className="text-stone-500 text-sm">Continue your learning flow.</p>
       </header>
 
-      {/* ── Error Banner ── */}
+      {/* Error Banner */}
       {(error || localError) && (
         <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
           <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
@@ -56,7 +56,7 @@ const LoginPage = () => {
         </div>
       )}
 
-      {/* ── Form ── */}
+      {/* Form */}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
         {/* Identifier: email OR username */}
@@ -127,7 +127,7 @@ const LoginPage = () => {
         </div>
       </form>
 
-      {/* ── Switch to register ── */}
+      {/* Switch to register */}
       <p className="mt-6 text-center text-sm text-stone-500">
         New to StudyFlow?{' '}
         <Link
@@ -138,7 +138,7 @@ const LoginPage = () => {
         </Link>
       </p>
 
-      {/* ── Legal ── */}
+      {/* Legal */}
       <div className="mt-6 pt-6 border-t border-stone-100">
         <p className="text-xs text-stone-400 text-center leading-relaxed">
           By continuing, you agree to our{' '}

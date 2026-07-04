@@ -1,20 +1,7 @@
-/**
- * StudyFlow Learning Glyphs — custom icon system.
- *
- * All icons are outline-style SVGs (Lucide-compatible paths), rounded,
- * optimised for the "notebook / learning desk" aesthetic.
- *
- * Usage:
- *   import StudyIcon, { IconBadge } from '../components/StudyIcon'
- *
- *   <StudyIcon name="book-open" size={20} className="text-violet-600" />
- *   <IconBadge name="flame" bg="bg-amber-100" icon="text-amber-600" />
- */
-
-/* ─── Glyph registry ──────────────────────────────────────── */
+/* Glyph registry */
 const GLYPHS = {
 
-  /* ── Learning & Content ── */
+  /* Learning & Content */
   'book-open': (
     <>
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -51,7 +38,7 @@ const GLYPHS = {
     </>
   ),
 
-  /* ── Time & Focus ── */
+  /* Time & Focus */
   'clock': (
     <>
       <circle cx="12" cy="12" r="10" />
@@ -78,7 +65,7 @@ const GLYPHS = {
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   ),
 
-  /* ── Progress & Goals ── */
+  /* Progress & Goals */
   'target': (
     <>
       <circle cx="12" cy="12" r="10" />
@@ -107,7 +94,7 @@ const GLYPHS = {
     <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
   ),
 
-  /* ── Task status ── */
+  /* Task status */
   'check': (
     <polyline points="20 6 9 17 4 12" />
   ),
@@ -121,7 +108,7 @@ const GLYPHS = {
     <circle cx="12" cy="12" r="10" />
   ),
 
-  /* ── Navigation & UI ── */
+  /* Navigation & UI */
   'calendar': (
     <>
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -197,7 +184,7 @@ const GLYPHS = {
   ),
 }
 
-/* ─── StudyIcon component ─────────────────────────────────── */
+/* StudyIcon component */
 /**
  * @param {string}  name         - Glyph key from GLYPHS registry
  * @param {number}  size         - Width & height in px (default 20)
@@ -230,7 +217,7 @@ const StudyIcon = ({ name, size = 20, strokeWidth = 1.75, className = '' }) => {
   )
 }
 
-/* ─── IconBadge component ─────────────────────────────────── */
+/* IconBadge component */
 /**
  * Wraps a StudyIcon in a soft coloured badge.
  * Use for section headers, stat cards, feature rows, etc.

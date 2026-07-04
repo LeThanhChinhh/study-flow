@@ -91,7 +91,7 @@ const RegisterPage = () => {
         </p>
       </header>
 
-      {/* ── Error Banner ── */}
+      {/* Error Banner */}
       {(error || localError) && (
         <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
           <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
