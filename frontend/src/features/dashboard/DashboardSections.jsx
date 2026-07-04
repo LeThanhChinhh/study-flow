@@ -1,7 +1,7 @@
 import StudyIcon, { IconBadge } from '../../components/StudyIcon'
 import {
-  MOCK_USER, MOCK_STREAK, MOCK_SESSIONS, MOCK_TASKS, MOCK_MODULES,
-  getGreeting, TODAY_STR, MODULE_COLORS, REMAINING_TASKS, ACTIVE_TASK
+  MOCK_USER, MOCK_STREAK, MOCK_SESSIONS, MOCK_MODULES,
+  getGreeting, TODAY_STR, MODULE_COLORS, ACTIVE_TASK
 } from './dashboardData'
 
 /* App navigation */
@@ -56,7 +56,7 @@ export const AppNav = ({ user, onLogout }) => (
 )
 
 /* Hero greeting section */
-export const GreetingSection = ({ user }) => {
+export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0 }) => {
   const { word, icon } = getGreeting()
   return (
     <header className="mb-8 animate-slide-up">
@@ -76,14 +76,14 @@ export const GreetingSection = ({ user }) => {
       <p className="text-stone-500 text-sm mb-6 max-w-md leading-relaxed">
         You have{' '}
         <span className="font-semibold text-stone-700">
-          {REMAINING_TASKS} {REMAINING_TASKS === 1 ? 'task' : 'tasks'}
+          {remainingTasks} {remainingTasks === 1 ? 'task' : 'tasks'}
         </span>{' '}
         remaining today. Keep the momentum going.
       </p>
 
       {/* Hero CTAs */}
       <div className="flex flex-wrap items-center gap-3">
-        <button id="cta-start-focus" className="btn-accent">
+        <button id="cta-start-focus" className="btn-accent" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
           Start focus session
         </button>
@@ -112,14 +112,14 @@ export const TaskDot = ({ status }) => {
 }
 
 /* Today's Flow card */
-export const TodayFlowCard = () => {
-  const doneCount = MOCK_TASKS.filter(t => t.status === 'done').length
-  const pct = Math.round((doneCount / MOCK_TASKS.length) * 100)
+export const TodayFlowCard = ({ tasks = [], isLoading = false, error = null }) => {
+  const doneCount = tasks.filter(t => t.status === 'done').length
+  const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
   return (
     <section
       aria-label="Today's learning flow"
-      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden"
+      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full"
     >
       {/* Subtle inner highlight */}
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent" />
@@ -134,57 +134,89 @@ export const TodayFlowCard = () => {
           </div>
         </div>
         <span className="badge bg-stone-100 text-stone-500 shrink-0">
-          {doneCount} / {MOCK_TASKS.length} done
+          {doneCount} / {tasks.length} done
         </span>
       </div>
 
-      {/* Task timeline */}
-      <ul className="space-y-0" role="list">
-        {MOCK_TASKS.map((task, idx) => {
-          const isLast = idx === MOCK_TASKS.length - 1
-          return (
-            <li key={task.id} className="flex gap-3">
-              {/* Connector */}
-              <div className="flex flex-col items-center">
-                <TaskDot status={task.status} />
-                {!isLast && <div className="w-px flex-1 mt-1.5 bg-stone-100" />}
-              </div>
-
-              {/* Row content */}
-              <div className={`task-row ${isLast ? 'pb-0' : 'pb-3'}`}>
-                <div
-                  className={`task-row-inner${task.status === 'active' ? ' is-active' : ''}`}
-                >
-                  <div className="min-w-0">
-                    <p className={`text-sm leading-snug ${
-                      task.status === 'done'   ? 'line-through text-stone-400' :
-                      task.status === 'active' ? 'text-violet-700 font-semibold' :
-                      'text-stone-700 font-medium'
-                    }`}>
-                      {task.title}
-                    </p>
-                    <p className="text-xs text-stone-400 mt-0.5">
-                      {task.module} · {task.mins} min
-                    </p>
-                  </div>
-                  {task.status === 'active' && (
-                    <span className="badge bg-violet-100 text-violet-600 shrink-0">In progress</span>
-                  )}
-                  {task.status === 'done' && (
-                    <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
-                  )}
+      {/* States */}
+      <div className="flex-1 flex flex-col justify-center">
+        {isLoading && (
+          <div className="space-y-4 py-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-stone-100 shrink-0 mt-0.5 animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-stone-100 rounded w-3/4 animate-pulse" />
+                  <div className="h-3 bg-stone-50 rounded w-1/2 animate-pulse" />
                 </div>
               </div>
-            </li>
-          )
-        })}
-      </ul>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <StudyIcon name="alert-circle" size={24} className="text-stone-300 mb-2" />
+            <p className="text-sm text-stone-500">{error}</p>
+          </div>
+        )}
+
+        {!isLoading && !error && tasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <StudyIcon name="check-circle" size={24} className="text-stone-300 mb-2" />
+            <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && tasks.length > 0 && (
+          <ul className="space-y-0" role="list">
+            {tasks.map((task, idx) => {
+              const isLast = idx === tasks.length - 1
+              return (
+                <li key={task.id} className="flex gap-3">
+                  {/* Connector */}
+                  <div className="flex flex-col items-center">
+                    <TaskDot status={task.status} />
+                    {!isLast && <div className="w-px flex-1 mt-1.5 bg-stone-100" />}
+                  </div>
+
+                  {/* Row content */}
+                  <div className={`task-row ${isLast ? 'pb-0' : 'pb-3'}`}>
+                    <div
+                      className={`task-row-inner${task.status === 'active' ? ' is-active' : ''}`}
+                    >
+                      <div className="min-w-0">
+                        <p className={`text-sm leading-snug ${
+                          task.status === 'done'   ? 'line-through text-stone-400' :
+                          task.status === 'active' ? 'text-violet-700 font-semibold' :
+                          'text-stone-700 font-medium'
+                        }`}>
+                          {task.title}
+                        </p>
+                        <p className="text-xs text-stone-400 mt-0.5">
+                          {task.module} · {task.mins} min
+                        </p>
+                      </div>
+                      {task.status === 'active' && (
+                        <span className="badge bg-violet-100 text-violet-600 shrink-0">In progress</span>
+                      )}
+                      {task.status === 'done' && (
+                        <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
 
       {/* Progress bar */}
-      <div>
+      <div className="mt-auto pt-5">
         <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill"
+            className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -238,7 +270,7 @@ export const PomodoroRing = () => {
 }
 
 /* Focus Session card */
-export const FocusSessionCard = () => (
+export const FocusSessionCard = ({ onStartFocus }) => (
   <section
     aria-label="Focus session"
     className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden"
@@ -271,7 +303,7 @@ export const FocusSessionCard = () => (
       </div>
     )}
 
-    <button id="focus-start-btn" className="btn-accent w-full justify-center">
+    <button id="focus-start-btn" className="btn-accent w-full justify-center" onClick={onStartFocus}>
       <StudyIcon name="play" size={14} strokeWidth={2.5} />
       Start session
     </button>

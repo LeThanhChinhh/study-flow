@@ -39,9 +39,10 @@ export default {
         'drift':       'drift     9s    ease-in-out infinite',
 
         /* ── UI feedback ── */
-        'card-rise':   'cardRise 0.35s ease-out both',
-        'shimmer':     'shimmer  2.2s  linear infinite',
-        'ring-spin':   'ringSpin 60s   linear   infinite',
+        'card-rise':     'cardRise    0.35s ease-out both',
+        'shimmer':       'shimmer     2.2s  linear infinite',
+        'ring-spin':     'ringSpin    60s   linear   infinite',
+        'timer-breathe': 'timerBreathe 3s   ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -89,6 +90,10 @@ export default {
         ringSpin: {
           '0%':   { transform: 'rotate(0deg)'   },
           '100%': { transform: 'rotate(360deg)' },
+        },
+        timerBreathe: {
+          '0%, 100%': { transform: 'scale(1)'     },
+          '50%':      { transform: 'scale(1.018)' },
         },
       },
       boxShadow: {
