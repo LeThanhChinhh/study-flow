@@ -109,6 +109,10 @@ const DashboardPage = () => {
     }
   }
 
+  const handleOpenPlanning = () => {
+    navigate('/planning')
+  }
+
   return (
     <div className="min-h-screen">
       <StudyOrbitBackdrop />
@@ -116,7 +120,13 @@ const DashboardPage = () => {
       <AppNav user={user} onLogout={handleLogout} />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-10 space-y-6">
-        <GreetingSection user={user} onStartFocus={handleStartFocus} remainingTasks={remainingTasksCount} hasActiveTask={!!nextFocusTask} />
+        <GreetingSection
+          user={user}
+          onStartFocus={handleStartFocus}
+          onCreateGoal={handleOpenPlanning}
+          remainingTasks={remainingTasksCount}
+          hasActiveTask={!!nextFocusTask}
+        />
 
         <div
           className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise"
@@ -136,7 +146,12 @@ const DashboardPage = () => {
           <div className="lg:col-span-3"><LearningProgressCard /></div>
         </div>
 
-        <QuickActionsBar />
+        <QuickActionsBar
+          onUploadPdf={handleOpenPlanning}
+          onOpenWorkspace={() => navigate('/focus')}
+          onReviewNotes={handleOpenPlanning}
+          onViewSchedule={handleOpenPlanning}
+        />
       </main>
 
       <footer className="relative z-10 max-w-6xl mx-auto px-6 py-8">

@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import FocusWorkspacePage from './pages/FocusWorkspacePage'
+import PlanningPage from './pages/PlanningPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import { useAuth } from './auth/AuthContext'
@@ -29,6 +30,7 @@ function App() {
         {/* App routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/planning"  element={<PlanningPage />} />
           <Route path="/focus"     element={<FocusWorkspacePage />} />
         </Route>
 
