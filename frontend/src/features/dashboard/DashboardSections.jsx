@@ -56,7 +56,7 @@ export const AppNav = ({ user, onLogout }) => (
 )
 
 /* Hero greeting section */
-export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0, hasActiveTask = true }) => {
+export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTasks = 0, hasActiveTask = true }) => {
   const { word, icon } = getGreeting()
   return (
     <header className="mb-8 animate-slide-up">
@@ -87,7 +87,7 @@ export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0, hasAct
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
           {hasActiveTask ? 'Start focus session' : 'Open focus studio'}
         </button>
-        <button id="cta-new-goal" className="btn-ghost">
+        <button id="cta-new-goal" className="btn-ghost" onClick={onCreateGoal}>
           <StudyIcon name="plus" size={14} />
           New learning goal
         </button>
@@ -464,7 +464,7 @@ const QUICK_ACTIONS = [
   },
 ]
 
-export const QuickActionsBar = () => (
+export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onReviewNotes, onViewSchedule }) => (
   <section aria-label="Quick actions" className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
     <h2 className="label-overline mb-3">Quick Actions</h2>
     <div className="flex flex-wrap gap-2.5">
@@ -472,6 +472,13 @@ export const QuickActionsBar = () => (
         <button
           key={a.id}
           id={a.id}
+          onClick={
+            a.id === 'qa-upload' ? onUploadPdf :
+            a.id === 'qa-kanban' ? onOpenWorkspace :
+            a.id === 'qa-notes' ? onReviewNotes :
+            a.id === 'qa-calendar' ? onViewSchedule :
+            undefined
+          }
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium
                       transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${a.cls}`}
         >
