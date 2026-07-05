@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface MaterialRepository extends JpaRepository<Material, UUID> {
 
     Optional<Material> findByJobIdAndUserId(String jobId, UUID userId);
+
+    Optional<Material> findByIdAndUserId(UUID id, UUID userId);
 }
