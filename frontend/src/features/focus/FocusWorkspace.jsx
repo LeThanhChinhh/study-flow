@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getTaskById } from '../../api/taskApi'
 import { motion } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 import FocusDecor from './FocusDecor'
@@ -42,6 +43,31 @@ const timerVariants = {
 
 const FocusWorkspace = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const taskId = searchParams.get('taskId')
+
+  const [currentTask, setCurrentTask] = useState(null)
+  const [isTaskLoading, setIsTaskLoading] = useState(false)
+  const [taskError, setTaskError] = useState(null)
+
+  useEffect(() => {
+    const fetchTask = async () => {
+      if (!taskId) return
+      try {
+        setIsTaskLoading(true)
+        setTaskError(null)
+        const taskData = await getTaskById(taskId)
+        setCurrentTask(taskData)
+      } catch (err) {
+        console.error('Failed to fetch task for focus session:', err)
+        setTaskError('Could not load task details. Using fallback data.')
+      } finally {
+        setIsTaskLoading(false)
+      }
+    }
+    fetchTask()
+  }, [taskId])
+
 
   // Timer state
   const [secondsLeft, setSecondsLeft] = useState(POMODORO_SECONDS)
@@ -168,7 +194,7 @@ const FocusWorkspace = () => {
               visible: { opacity: 1, x: 0, transition: { duration: 0.45, ease: 'easeOut', delay: 0.15 } },
             }}
           >
-            <CurrentTaskPanel/>
+            <CurrentTaskPanel currentTask={currentTask} isTaskLoading={isTaskLoading} taskError={taskError} />
           </motion.div>
 
           {/* Center — Timer (hero) */}

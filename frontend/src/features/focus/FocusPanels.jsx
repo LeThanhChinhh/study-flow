@@ -15,8 +15,45 @@ const panelVariants = {
 }
 
 // Current Task panel — shown on the left column
-export const CurrentTaskPanel = () => {
-  const { title, subject, module, estimatedMins, intentions } = FOCUS_TASK
+export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
+  const calculateDurationMinutes = (startTime, endTime) => {
+    if (!startTime || !endTime) return 25
+    try {
+      const [h1, m1] = startTime.split(':').map(Number)
+      const [h2, m2] = endTime.split(':').map(Number)
+      let diff = (h2 * 60 + m2) - (h1 * 60 + m1)
+      if (diff < 0) diff += 24 * 60
+      return diff
+    } catch (e) {
+      return 25
+    }
+  }
+
+  const title = currentTask ? currentTask.title : FOCUS_TASK.title
+  const subject = currentTask ? (currentTask.goalName || 'Study Goal') : FOCUS_TASK.subject
+  const module = currentTask ? (currentTask.moduleName || 'Scheduled Task') : FOCUS_TASK.module
+  const estimatedMins = currentTask ? calculateDurationMinutes(currentTask.startTime, currentTask.endTime) : FOCUS_TASK.estimatedMins
+  const intentions = FOCUS_TASK.intentions
+
+  if (isTaskLoading) {
+    return (
+      <motion.section
+        variants={panelVariants}
+        aria-label="Current task loading"
+        className="card p-6 flex flex-col gap-5 relative overflow-hidden"
+      >
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent"/>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center shrink-0 animate-pulse" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 bg-stone-100 rounded w-1/3 animate-pulse" />
+            <div className="h-4 bg-stone-100 rounded w-2/3 animate-pulse" />
+          </div>
+        </div>
+      </motion.section>
+    )
+  }
+
 
   return (
     <motion.section
@@ -34,7 +71,7 @@ export const CurrentTaskPanel = () => {
         </div>
         <div>
           <p className="text-[10.5px] font-semibold uppercase tracking-widest text-stone-400 mb-0.5">
-            Current Task
+            Current Task {taskError && <span className="text-rose-400 normal-case tracking-normal ml-1">(Fallback mode)</span>}
           </p>
           <h2 className="text-sm font-bold text-stone-800 leading-snug">{title}</h2>
         </div>

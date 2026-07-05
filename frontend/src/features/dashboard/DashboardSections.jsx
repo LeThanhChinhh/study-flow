@@ -56,7 +56,7 @@ export const AppNav = ({ user, onLogout }) => (
 )
 
 /* Hero greeting section */
-export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0 }) => {
+export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0, hasActiveTask = true }) => {
   const { word, icon } = getGreeting()
   return (
     <header className="mb-8 animate-slide-up">
@@ -85,7 +85,7 @@ export const GreetingSection = ({ user, onStartFocus, remainingTasks = 0 }) => {
       <div className="flex flex-wrap items-center gap-3">
         <button id="cta-start-focus" className="btn-accent" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
-          Start focus session
+          {hasActiveTask ? 'Start focus session' : 'Open focus studio'}
         </button>
         <button id="cta-new-goal" className="btn-ghost">
           <StudyIcon name="plus" size={14} />
@@ -270,7 +270,7 @@ export const PomodoroRing = () => {
 }
 
 /* Focus Session card */
-export const FocusSessionCard = ({ onStartFocus }) => (
+export const FocusSessionCard = ({ onStartFocus, activeTask }) => (
   <section
     aria-label="Focus session"
     className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden"
@@ -295,11 +295,16 @@ export const FocusSessionCard = ({ onStartFocus }) => (
     <PomodoroRing />
 
     {/* Next task */}
-    {ACTIVE_TASK && (
+    {activeTask ? (
       <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
         <p className="label-overline mb-1">Ready to focus</p>
-        <p className="text-sm font-medium text-stone-700 leading-snug">{ACTIVE_TASK.title}</p>
-        <p className="text-xs text-stone-400 mt-0.5">{ACTIVE_TASK.module} · {ACTIVE_TASK.mins} min</p>
+        <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
+        <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
+      </div>
+    ) : (
+      <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
+        <p className="label-overline mb-1">No task selected</p>
+        <p className="text-sm font-medium text-stone-700 leading-snug">Create or schedule a task to start a guided focus session.</p>
       </div>
     )}
 
