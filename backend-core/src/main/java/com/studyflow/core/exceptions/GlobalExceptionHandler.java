@@ -68,6 +68,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflictException(
+            ConflictException exception
+    ) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                exception.getMessage()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     /**
      * Xử lý khi JWT hợp lệ nhưng user không còn tồn tại trong DB.
      */
