@@ -1,7 +1,6 @@
 import StudyIcon, { IconBadge } from '../../components/StudyIcon'
 import {
-  MOCK_USER, MOCK_STREAK, MOCK_SESSIONS, MOCK_MODULES,
-  getGreeting, TODAY_STR, MODULE_COLORS, ACTIVE_TASK
+  getGreeting, TODAY_STR
 } from './dashboardData'
 
 /* App navigation */
@@ -21,7 +20,7 @@ export const AppNav = ({ user, onLogout }) => (
       <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 rounded-full border border-violet-100/80">
         <StudyIcon name="target" size={12} className="text-violet-500" />
         <span className="text-xs font-medium text-violet-700 truncate max-w-[180px]">
-          {user?.goal || MOCK_USER.goal}
+          {user?.goal || 'Learning dashboard'}
         </span>
       </div>
 
@@ -31,12 +30,12 @@ export const AppNav = ({ user, onLogout }) => (
           {/* Avatar */}
           <div
             className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-bold select-none uppercase shadow-sm ring-2 ring-white"
-            aria-label={`${user?.username || MOCK_USER.name}'s avatar`}
+            aria-label={`${user?.username || user?.name || 'Student'}'s avatar`}
           >
-            {user?.username ? user.username.charAt(0) : MOCK_USER.initials}
+            {(user?.username || user?.name || 'S').charAt(0).toUpperCase()}
           </div>
           <span className="hidden sm:block text-sm font-medium text-stone-700">
-            {user?.username || MOCK_USER.name}
+            {user?.username || user?.name || 'Student'}
           </span>
         </div>
 
@@ -69,7 +68,7 @@ export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTas
 
       {/* Headline */}
       <h1 className="text-3xl sm:text-4xl font-bold text-stone-800 tracking-tight mb-2 leading-tight">
-        {word}, {user?.username || MOCK_USER.name}.
+        {word}, {user?.username || user?.name || 'Student'}.
       </h1>
 
       {/* Sub-line with remaining tasks */}
@@ -85,7 +84,7 @@ export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTas
       <div className="flex flex-wrap items-center gap-3">
         <button id="cta-start-focus" className="btn-accent" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
-          {hasActiveTask ? 'Start focus session' : 'Open focus studio'}
+          {hasActiveTask ? 'Start focus session' : 'Create learning plan'}
         </button>
         <button id="cta-new-goal" className="btn-ghost" onClick={onCreateGoal}>
           <StudyIcon name="plus" size={14} />
@@ -301,10 +300,10 @@ export const PomodoroRing = () => {
 }
 
 /* Focus Session card */
-export const FocusSessionCard = ({ onStartFocus, activeTask }) => (
+export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => (
   <section
     aria-label="Focus session"
-    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden"
+    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden h-full"
   >
     {/* Ambient rose tint at bottom */}
     <div
@@ -327,35 +326,39 @@ export const FocusSessionCard = ({ onStartFocus, activeTask }) => (
 
     {/* Next task */}
     {activeTask ? (
-      <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
-        <p className="label-overline mb-1">Ready to focus</p>
-        <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
-        <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
-      </div>
+      <>
+        <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
+          <p className="label-overline mb-1">Ready to focus</p>
+          <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
+          <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
+        </div>
+        <button id="focus-start-btn" className="btn-accent w-full justify-center" onClick={onStartFocus}>
+          <StudyIcon name="play" size={14} strokeWidth={2.5} />
+          Start session
+        </button>
+      </>
     ) : (
-      <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
-        <p className="label-overline mb-1">No task selected</p>
-        <p className="text-sm font-medium text-stone-700 leading-snug">Create or schedule a task to start a guided focus session.</p>
-      </div>
+      <>
+        <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
+          <p className="label-overline mb-1">No focus task yet</p>
+          <p className="text-sm font-medium text-stone-700 leading-snug">Create a learning plan to start your first focus session.</p>
+        </div>
+        <button id="focus-start-btn" className="btn-primary w-full justify-center" onClick={onCreateGoal}>
+          <StudyIcon name="plus" size={14} strokeWidth={2.5} />
+          Create learning plan
+        </button>
+      </>
     )}
-
-    <button id="focus-start-btn" className="btn-accent w-full justify-center" onClick={onStartFocus}>
-      <StudyIcon name="play" size={14} strokeWidth={2.5} />
-      Start session
-    </button>
-
-    <p className="text-xs text-stone-400">
-      {MOCK_SESSIONS.today} session today · {MOCK_SESSIONS.focusMinutesToday} min focused
-    </p>
   </section>
 )
 
 /* Study Streak card */
-export const StudyStreakCard = () => {
-  const { current, best, week } = MOCK_STREAK
-  const weekLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+export const StudyStreakCard = ({ user }) => {
+  const currentStreak = user?.currentStreak || 0
+  const highestStreak = user?.highestStreak || 0
+  
   return (
-    <section aria-label="Study streak" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden">
+    <section aria-label="Study streak" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full">
       {/* Subtle amber warmth glow */}
       <div
         aria-hidden="true"
@@ -368,104 +371,79 @@ export const StudyStreakCard = () => {
         <IconBadge name="flame" bg="bg-amber-50" icon="text-amber-500" badgeSize="w-9 h-9" />
         <div>
           <h2 className="text-sm font-semibold text-stone-800">Study Streak</h2>
-          <p className="text-xs text-stone-400 mt-0.5">Best: {best} days</p>
+          <p className="text-xs text-stone-400 mt-0.5">Best: {highestStreak} days</p>
         </div>
       </div>
 
-      {/* Big streak number */}
-      <div className="flex items-baseline gap-2">
-        <span className="text-5xl font-bold text-stone-800 tracking-tight">{current}</span>
-        <span className="text-base font-medium text-stone-500">day streak</span>
+      <div className="flex-1 flex flex-col justify-center">
+        {currentStreak > 0 ? (
+          <div className="flex items-baseline gap-2">
+            <span className="text-5xl font-bold text-stone-800 tracking-tight">{currentStreak}</span>
+            <span className="text-base font-medium text-stone-500">day streak</span>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-stone-500">Streak tracking will appear after completed focus sessions.</p>
+          </div>
+        )}
       </div>
-
-      {/* Week heatmap */}
-      <div>
-        <p className="label-overline mb-3">This week</p>
-        <div className="flex gap-2 items-end" role="list" aria-label="Weekly study days">
-          {weekLabels.map((label, i) => (
-            <div key={i} role="listitem" className="flex flex-col items-center gap-1.5 flex-1">
-              <div
-                className={`streak-bar w-full rounded-lg flex items-center justify-center ${
-                  week[i]
-                    ? 'h-8 bg-gradient-to-t from-amber-400 to-amber-300 is-done shadow-sm'
-                    : 'h-5 bg-stone-100'
-                }`}
-                aria-label={`${label}: ${week[i] ? 'studied' : 'not studied'}`}
-              >
-                {week[i] && (
-                  <StudyIcon name="flame" size={11} className="text-white/90" strokeWidth={2} />
-                )}
-              </div>
-              <span className={`text-[10px] font-medium ${week[i] ? 'text-amber-500' : 'text-stone-300'}`}>
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs text-stone-400 pt-2 border-t border-stone-100">
-        Studied {week.filter(Boolean).length} of 7 days this week — great consistency!
-      </p>
     </section>
   )
 }
 
 /* Learning Progress card */
-export const LearningProgressCard = () => (
-  <section aria-label="Learning progress" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden">
-    <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/50 to-transparent" />
+export const LearningProgressCard = ({ user, tasks = [], onCreateGoal }) => {
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.status === 'done').length
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-    <div className="flex items-center gap-3">
-      <IconBadge name="bar-chart" bg="bg-emerald-50" icon="text-emerald-600" badgeSize="w-9 h-9" />
-      <div>
-        <h2 className="text-sm font-semibold text-stone-800">Learning Progress</h2>
-        <p className="text-xs text-stone-400 mt-0.5">{MOCK_USER.goal}</p>
+  return (
+    <section aria-label="Learning progress" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/50 to-transparent" />
+
+      <div className="flex items-center gap-3">
+        <IconBadge name="bar-chart" bg="bg-emerald-50" icon="text-emerald-600" badgeSize="w-9 h-9" />
+        <div>
+          <h2 className="text-sm font-semibold text-stone-800">Learning Progress</h2>
+          <p className="text-xs text-stone-400 mt-0.5">{user?.goal || 'Overall task completion'}</p>
+        </div>
       </div>
-    </div>
 
-    <div className="space-y-5">
-      {MOCK_MODULES.map((mod) => {
-        const c = MODULE_COLORS[mod.color]
-        return (
-          <div key={mod.id}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`badge ${c.badge}`}>{mod.name}</span>
-              <span className="text-xs text-stone-400 tabular-nums">
-                {mod.done} / {mod.total} tasks
-              </span>
-            </div>
-            <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${c.bar} rounded-full progress-fill`}
-                style={{ width: `${mod.progress}%` }}
-                role="progressbar"
-                aria-valuenow={mod.progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`${mod.name}: ${mod.progress}%`}
-              />
-            </div>
-            <p className="text-[11px] text-stone-400 mt-1.5">{mod.progress}% complete</p>
+      <div className="flex-1 flex flex-col justify-center">
+        {totalTasks === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
+             <p className="text-sm text-stone-500">No learning tasks yet.</p>
+             <button onClick={onCreateGoal} className="btn-ghost text-xs px-3 py-1.5">
+               Create a learning plan
+             </button>
           </div>
-        )
-      })}
-    </div>
-
-    <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
-      <p className="text-xs text-stone-400">
-        Overall: {Math.round((8 + 4 + 2) / (12 + 10 + 10) * 100)}% through goal
-      </p>
-      <button
-        className="text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors flex items-center gap-1 hover:gap-1.5"
-        aria-label="View all learning progress"
-      >
-        View all
-        <StudyIcon name="chevron-right" size={12} strokeWidth={2.5} />
-      </button>
-    </div>
-  </section>
-)
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-stone-700">All Tasks</span>
+                <span className="text-xs text-stone-500 tabular-nums">
+                  {completedTasks} / {totalTasks} tasks
+                </span>
+              </div>
+              <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full progress-fill transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                  role="progressbar"
+                  aria-valuenow={progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </div>
+              <p className="text-xs text-stone-500 mt-2">{progressPercent}% complete</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
 
 /* Quick Actions bar */
 const QUICK_ACTIONS = [
