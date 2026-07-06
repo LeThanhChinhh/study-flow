@@ -1,8 +1,7 @@
 import { motion } from 'motion/react'
+import { Link } from 'react-router-dom'
 import StudyIcon from '../../components/StudyIcon'
 import {
-  FOCUS_TASK,
-  FOCUS_PROGRESS,
   TODAY_TIP,
   RECALL_HINT,
   BREAK_SUGGESTION,
@@ -13,6 +12,8 @@ const panelVariants = {
   hidden: { opacity: 0, y: 18 },
   visible: { opacity: 1, y: 0 },
 }
+
+const DASHBOARD_CTA_CLASS = "inline-flex items-center justify-center px-4 py-2 mt-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg transition-colors"
 
 // Current Task panel — shown on the left column
 export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
@@ -28,12 +29,6 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
       return 25
     }
   }
-
-  const title = currentTask ? currentTask.title : FOCUS_TASK.title
-  const subject = currentTask ? (currentTask.goalName || 'Study Goal') : FOCUS_TASK.subject
-  const module = currentTask ? (currentTask.moduleName || 'Scheduled Task') : FOCUS_TASK.module
-  const estimatedMins = currentTask ? calculateDurationMinutes(currentTask.startTime, currentTask.endTime) : FOCUS_TASK.estimatedMins
-  const intentions = FOCUS_TASK.intentions
 
   if (isTaskLoading) {
     return (
@@ -54,6 +49,49 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
     )
   }
 
+  if (taskError) {
+    return (
+      <motion.section
+        variants={panelVariants}
+        className="card p-6 flex flex-col gap-5 items-center text-center relative overflow-hidden"
+      >
+        <StudyIcon name="alert-circle" size={32} className="text-rose-400 mb-2"/>
+        <h2 className="text-sm font-bold text-stone-800">Failed to load task</h2>
+        <p className="text-xs text-stone-500">{taskError}</p>
+        <Link to="/dashboard" className={DASHBOARD_CTA_CLASS}>
+          Go to Dashboard
+        </Link>
+      </motion.section>
+    )
+  }
+
+  if (!currentTask) {
+    return (
+      <motion.section
+        variants={panelVariants}
+        className="card p-6 flex flex-col gap-5 items-center text-center relative overflow-hidden"
+      >
+        <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-2">
+          <StudyIcon name="map" size={24} className="text-stone-400"/>
+        </div>
+        <h2 className="text-sm font-bold text-stone-800">No task selected</h2>
+        <p className="text-xs text-stone-500">Choose a task from Dashboard to start a guided focus session.</p>
+        <Link to="/dashboard" className={DASHBOARD_CTA_CLASS}>
+          Go to Dashboard
+        </Link>
+      </motion.section>
+    )
+  }
+
+  const title = currentTask.title
+  const subject = currentTask.goalName || 'Study Goal'
+  const module = currentTask.moduleName || 'Scheduled Task'
+  const estimatedMins = calculateDurationMinutes(currentTask.startTime, currentTask.endTime)
+  const intentions = [
+    `Focus on: ${title}`,
+    'Complete one Pomodoro session',
+    'Finish the recall quiz after the timer'
+  ]
 
   return (
     <motion.section
@@ -71,7 +109,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
         </div>
         <div>
           <p className="text-[10.5px] font-semibold uppercase tracking-widest text-stone-400 mb-0.5">
-            Current Task {taskError && <span className="text-rose-400 normal-case tracking-normal ml-1">(Fallback mode)</span>}
+            Current Task
           </p>
           <h2 className="text-sm font-bold text-stone-800 leading-snug">{title}</h2>
         </div>
@@ -108,89 +146,18 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
           ))}
         </ul>
       </div>
-
-      {/* Session counter badge */}
-      <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
-        <span className="text-xs text-stone-400">
-          Session {FOCUS_PROGRESS.sessionsToday + 1} of {FOCUS_PROGRESS.sessionGoal} today
-        </span>
-        <span className="badge bg-emerald-50 text-emerald-700">
-          <StudyIcon name="zap" size={11} className="text-emerald-500"/>
-          On track
-        </span>
-      </div>
     </motion.section>
   )
 }
 
 // Support panel — shown on the right column
 export const SupportPanel = () => {
-  const { sessionsToday, minutesToday, sessionGoal, minuteGoal } = FOCUS_PROGRESS
-  const sessionPct = Math.round((sessionsToday / sessionGoal) * 100)
-  const minutePct  = Math.round((minutesToday  / minuteGoal)  * 100)
-
   return (
     <motion.section
       variants={panelVariants}
       aria-label="Session support info"
       className="flex flex-col gap-4"
     >
-      {/* Today's focus progress */}
-      <div className="card p-5 flex flex-col gap-4 relative overflow-hidden">
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/50 to-transparent"/>
-
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-            <StudyIcon name="bar-chart" size={15} className="text-emerald-600"/>
-          </div>
-          <p className="text-sm font-semibold text-stone-800">Today's Focus</p>
-        </div>
-
-        <div className="space-y-3">
-          {/* Sessions progress */}
-          <div>
-            <div className="flex justify-between mb-1.5">
-              <span className="text-xs text-stone-500">Sessions</span>
-              <span className="text-xs font-medium text-stone-700 tabular-nums">
-                {sessionsToday} / {sessionGoal}
-              </span>
-            </div>
-            <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full progress-fill"
-                style={{ width: `${sessionPct}%` }}
-                role="progressbar"
-                aria-valuenow={sessionPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Sessions: ${sessionPct}%`}
-              />
-            </div>
-          </div>
-
-          {/* Minutes progress */}
-          <div>
-            <div className="flex justify-between mb-1.5">
-              <span className="text-xs text-stone-500">Focus minutes</span>
-              <span className="text-xs font-medium text-stone-700 tabular-nums">
-                {minutesToday} / {minuteGoal} min
-              </span>
-            </div>
-            <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill"
-                style={{ width: `${minutePct}%` }}
-                role="progressbar"
-                aria-valuenow={minutePct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Minutes: ${minutePct}%`}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Focus tip */}
       <div className="card p-5 flex flex-col gap-3 relative overflow-hidden">
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent"/>

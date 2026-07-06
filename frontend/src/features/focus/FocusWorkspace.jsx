@@ -73,7 +73,7 @@ const FocusWorkspace = () => {
         setCurrentTask(taskData)
       } catch (err) {
         console.error('Failed to fetch task for focus session:', err)
-        setTaskError('Could not load task details. Using fallback data.')
+        setTaskError('Could not load task details. Please return to the dashboard and try again.')
       } finally {
         setIsTaskLoading(false)
       }
@@ -280,6 +280,7 @@ const FocusWorkspace = () => {
               onResume={handleResume}
               onReset={handleReset}
               onComplete={handleTimerComplete}
+              disabled={!currentTask || isTaskLoading}
             />
 
             {/* Session mode indicator (visible below the timer on all sizes) */}
