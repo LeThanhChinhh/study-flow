@@ -4,6 +4,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import FocusWorkspacePage from './pages/FocusWorkspacePage'
 import PlanningPage from './pages/PlanningPage'
+import CalendarPage from './pages/CalendarPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
 import { useAuth } from './auth/AuthContext'
@@ -32,6 +33,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/planning"  element={<PlanningPage />} />
           <Route path="/focus"     element={<FocusWorkspacePage />} />
+          <Route path="/calendar"  element={<CalendarPage />} />
         </Route>
 
         {/* Catch-all */}

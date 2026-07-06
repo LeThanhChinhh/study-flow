@@ -179,7 +179,7 @@ const DashboardPage = () => {
           onUploadPdf={handleOpenPlanning}
           onOpenWorkspace={() => navigate('/focus')}
           onReviewNotes={handleOpenPlanning}
-          onViewSchedule={handleOpenPlanning}
+          onViewSchedule={() => navigate('/calendar')}
         />
       </main>
 
