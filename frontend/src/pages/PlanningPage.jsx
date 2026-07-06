@@ -272,8 +272,10 @@ const PlanningPage = () => {
   // Polling Step 4
   useEffect(() => {
     let interval = null;
-    if (currentStep === 3 && jobId && !parsedMaterial) {
+    let isPolling = true;
+    if (currentStep === 3 && jobId && !parsedMaterial && !errorMsg) {
       interval = setInterval(async () => {
+        if (!isPolling) return;
         try {
           const res = await getMaterialStatus(jobId);
           if (res.status === 'COMPLETED') {
@@ -285,13 +287,16 @@ const PlanningPage = () => {
           }
         } catch (err) {
           console.error(err);
+          setErrorMsg(err?.message || 'Could not check AI parsing status. Please try again.');
+          clearInterval(interval);
         }
       }, 3000);
     }
     return () => {
+      isPolling = false;
       if (interval) clearInterval(interval);
     };
-  }, [currentStep, jobId, parsedMaterial]);
+  }, [currentStep, jobId, parsedMaterial, errorMsg]);
 
   const goNext = async () => {
     setErrorMsg('');
@@ -319,8 +324,18 @@ const PlanningPage = () => {
         if (!parsedMaterial) throw new Error("Wait for AI parsing to complete");
       } else if (currentStep === 4) {
         if (!createdGoal?.id || !parsedMaterial?.id) throw new Error("Missing data to generate schedule");
-        await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
-        navigate('/dashboard');
+        try {
+          await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
+          navigate('/dashboard');
+        } catch (err) {
+          const errMsg = err?.message || err?.data?.message || "";
+
+          if (err?.status === 409 || errMsg.includes('already generated')) {
+            throw new Error("Schedule was already generated for this goal.");
+          }
+
+          throw new Error(errMsg || "Failed to generate schedule");
+        }
         return;
       }
       setCurrentStep((step) => step + 1);
@@ -412,8 +427,13 @@ const PlanningPage = () => {
           </div>
 
           {errorMsg && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
-              {errorMsg}
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg flex flex-col items-start gap-2">
+              <p>{errorMsg}</p>
+              {errorMsg.includes("already generated") && (
+                <button type="button" className="btn-ghost mt-1 text-red-700 bg-white/50 border-red-200 hover:bg-white" onClick={() => navigate('/dashboard')}>
+                  Go to Dashboard
+                </button>
+              )}
             </div>
           )}
 
@@ -425,8 +445,8 @@ const PlanningPage = () => {
             <button type="button" className="btn-ghost w-full sm:w-auto justify-center" onClick={goBack} disabled={isLoading}>
               {currentStep === 0 ? 'Cancel' : 'Previous step'}
             </button>
-            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading}>
-              {isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Go to dashboard' : 'Continue'}
+            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial && !errorMsg)}>
+              {isLoading && currentStep === STEPS.length - 1 ? 'Generating schedule...' : isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Generate schedule & go to dashboard' : 'Continue'}
               {!isLoading && <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />}
             </button>
           </div>
