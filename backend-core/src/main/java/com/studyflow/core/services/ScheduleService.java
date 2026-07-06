@@ -8,6 +8,7 @@ import com.studyflow.core.entities.LearningModule;
 import com.studyflow.core.entities.Material;
 import com.studyflow.core.entities.Task;
 import com.studyflow.core.entities.TimeSlot;
+import com.studyflow.core.exceptions.ConflictException;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.LearningModuleRepository;
 import com.studyflow.core.repositories.MaterialRepository;
@@ -65,6 +66,10 @@ public class ScheduleService {
         Material material = findOwnedCompletedMaterial(request.materialId(), userId);
 
         validateMaterialGoalCompatibility(material, goal.getId());
+
+        if (taskRepository.existsByUserIdAndGoalIdAndIsAiGeneratedTrue(userId, goal.getId())) {
+            throw new ConflictException("Schedule has already been generated for this goal.");
+        }
 
         List<ParsedModule> parsedModules = parseAiModules(material.getRawJson());
         List<TimeSlot> timeSlots = timeSlotRepository.findByUserIdOrderByDayOfWeekAscStartTimeAsc(userId);
@@ -126,7 +131,7 @@ public class ScheduleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Material not found"));
 
         if (!"COMPLETED".equals(material.getStatus())) {
-            throw new IllegalArgumentException("Material parsing is not completed yet");
+            throw new ConflictException("Material parsing is not completed yet");
         }
 
         if (material.getRawJson() == null || material.getRawJson().isEmpty()) {
@@ -156,7 +161,10 @@ public class ScheduleService {
                 throw new IllegalArgumentException("Invalid module format in parsed material");
             }
 
-            String moduleTitle = readString(moduleMap.get("title"), "Module " + (moduleIndex + 1));
+            String moduleTitle = readString(moduleMap.get("title"), null);
+            if (!StringUtils.hasText(moduleTitle)) {
+                throw new IllegalArgumentException("Module title is required in parsed material");
+            }
             Integer moduleOrderIndex = readInteger(moduleMap.get("orderIndex"), moduleIndex + 1);
             Object tasksObject = moduleMap.get("tasks");
 
@@ -176,8 +184,8 @@ public class ScheduleService {
                 }
 
                 int estimatedMinutes = readInteger(taskMap.get("estimatedMinutes"), DEFAULT_ESTIMATED_MINUTES);
-                if (estimatedMinutes <= 0) {
-                    throw new IllegalArgumentException("Task estimated minutes must be greater than 0");
+                if (estimatedMinutes <= 0 || estimatedMinutes > 180) {
+                    throw new IllegalArgumentException("Task estimated minutes must be between 1 and 180");
                 }
 
                 parsedTasks.add(new ParsedTask(taskTitle, estimatedMinutes));

@@ -45,6 +45,7 @@ const DashboardPage = () => {
   const navigate = useNavigate()
   
   const [tasks, setTasks] = useState([])
+  const [upcomingTasks, setUpcomingTasks] = useState([])
   const [isTasksLoading, setIsTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState(null)
 
@@ -54,7 +55,7 @@ const DashboardPage = () => {
         setIsTasksLoading(true)
         setTasksError(null)
         const today = formatLocalDate()
-        const fetchedTasks = await getTasks({ date: today })
+        const fetchedTasks = await getTasks() // fetch all
         
         let mappedTasks = fetchedTasks.map(t => {
           return {
@@ -64,11 +65,15 @@ const DashboardPage = () => {
             mins: calculateDurationMinutes(t.startTime, t.endTime),
             status: mapTaskStatus(t.status),
             orderIndex: t.orderIndex || 0,
-            startTime: t.startTime
+            startTime: t.startTime,
+            scheduledDate: t.scheduledDate || today
           }
         })
         
-        mappedTasks.sort((a, b) => {
+        const todayTasks = mappedTasks.filter(t => t.scheduledDate === today)
+        const futureTasks = mappedTasks.filter(t => t.scheduledDate > today)
+
+        todayTasks.sort((a, b) => {
           if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex
           if (a.startTime && b.startTime) {
             return a.startTime.localeCompare(b.startTime)
@@ -76,11 +81,21 @@ const DashboardPage = () => {
           return 0
         })
 
-        setTasks(mappedTasks)
+        futureTasks.sort((a, b) => {
+          const dateCmp = a.scheduledDate.localeCompare(b.scheduledDate)
+          if (dateCmp !== 0) return dateCmp
+          if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex
+          if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime)
+          return 0
+        })
+
+        setTasks(todayTasks)
+        setUpcomingTasks(futureTasks.slice(0, 3))
       } catch (err) {
         console.error('Failed to fetch tasks:', err)
         setTasks([])
-        setTasksError('Could not load today\'s tasks.')
+        setUpcomingTasks([])
+        setTasksError('Could not load tasks.')
       } finally {
         setIsTasksLoading(false)
       }
@@ -133,7 +148,7 @@ const DashboardPage = () => {
           style={{ animationDelay: '0.08s' }}
         >
           <div className="lg:col-span-3">
-            <TodayFlowCard tasks={tasks} isLoading={isTasksLoading} error={tasksError} />
+            <TodayFlowCard tasks={tasks} upcomingTasks={upcomingTasks} isLoading={isTasksLoading} error={tasksError} />
           </div>
           <div className="lg:col-span-2"><FocusSessionCard onStartFocus={handleStartFocus} activeTask={nextFocusTask} /></div>
         </div>

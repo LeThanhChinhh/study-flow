@@ -24,4 +24,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     );
 
     Optional<Task> findByIdAndUserId(UUID id, UUID userId);
+
+    boolean existsByUserIdAndGoalIdAndIsAiGeneratedTrue(UUID userId, UUID goalId);
 }

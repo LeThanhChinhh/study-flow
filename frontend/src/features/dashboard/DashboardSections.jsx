@@ -112,7 +112,7 @@ export const TaskDot = ({ status }) => {
 }
 
 /* Today's Flow card */
-export const TodayFlowCard = ({ tasks = [], isLoading = false, error = null }) => {
+export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null }) => {
   const doneCount = tasks.filter(t => t.status === 'done').length
   const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
@@ -161,10 +161,33 @@ export const TodayFlowCard = ({ tasks = [], isLoading = false, error = null }) =
           </div>
         )}
 
-        {!isLoading && !error && tasks.length === 0 && (
+        {!isLoading && !error && tasks.length === 0 && upcomingTasks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <StudyIcon name="check-circle" size={24} className="text-stone-300 mb-2" />
             <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && tasks.length === 0 && upcomingTasks.length > 0 && (
+          <div className="flex flex-col w-full">
+            <div className="flex flex-col items-center justify-center py-4 text-center mb-2">
+              <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
+              <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
+            </div>
+            
+            <div className="bg-stone-50/50 rounded-xl p-4 border border-stone-100">
+              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Upcoming tasks</h3>
+              <ul className="space-y-3">
+                {upcomingTasks.map(task => (
+                  <li key={task.id} className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-stone-700 leading-snug">{task.title}</p>
+                    <p className="text-xs text-stone-400">
+                      {task.scheduledDate} {task.startTime ? `· ${task.startTime}` : ''}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
