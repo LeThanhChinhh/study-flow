@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 import { POMODORO_SECONDS } from './focusData'
@@ -30,13 +31,28 @@ const STATUS_RING_COLOR = {
 }
 
 // FocusTimer owns the countdown state and exposes control handlers
-const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset }) => {
+const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete }) => {
   const progress = secondsLeft / POMODORO_SECONDS
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress)
   const isFocusing = status === 'focusing'
   const isComplete = status === 'complete'
   const isReady    = status === 'ready'
   const isPaused   = status === 'paused'
+
+  const hasCalledOnComplete = useRef(false)
+
+  useEffect(() => {
+    if (isReady) {
+      hasCalledOnComplete.current = false
+    }
+  }, [isReady])
+
+  useEffect(() => {
+    if (isComplete && !hasCalledOnComplete.current) {
+      hasCalledOnComplete.current = true
+      onComplete?.()
+    }
+  }, [isComplete, onComplete])
 
   return (
     <div className="flex flex-col items-center gap-8">
