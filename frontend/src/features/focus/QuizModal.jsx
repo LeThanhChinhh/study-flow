@@ -37,11 +37,15 @@ const itemVariants = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+const getQuizId = (quiz) => quiz?.id || quiz?.quizId
+const getOptionId = (option) => option?.id || option?.optionId || option?.selectedOptionId
+
 /**
  * Single quiz question card with option buttons.
  * Calls onSelect(quizId, optionId) when user picks an answer.
  */
 const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
+  const quizId = getQuizId(quiz)
   return (
     <motion.div
       custom={index}
@@ -66,21 +70,22 @@ const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
           <span className="text-xs font-bold text-violet-700">{index + 1}</span>
         </div>
         <p className="text-sm font-semibold text-stone-800 leading-snug pt-0.5">
-          {quiz.questionText}
+          {quiz.questionText || quiz.question || quiz.title || 'Question'}
         </p>
       </div>
 
       {/* Options */}
       <div className="flex flex-col gap-2 pl-10" role="radiogroup" aria-label={`Question ${index + 1} options`}>
-        {quiz.options.map((opt) => {
-          const isSelected = selectedOptionId === opt.id
+        {quiz.options.map((opt, optIdx) => {
+          const optId = getOptionId(opt)
+          const isSelected = selectedOptionId === optId
           return (
             <button
-              key={opt.id}
+              key={optId || optIdx}
               type="button"
               role="radio"
               aria-checked={isSelected}
-              onClick={() => onSelect(quiz.id, opt.id)}
+              onClick={() => onSelect(quizId, optId)}
               className={`
                 w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium
                 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1
@@ -103,7 +108,7 @@ const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
                     <span className="w-2 h-2 rounded-full bg-violet-500" />
                   )}
                 </span>
-                {opt.text}
+                {opt.optionText || opt.text || opt.label || 'Untitled option'}
               </span>
             </button>
           )
@@ -230,20 +235,24 @@ const QuizModal = ({
   }, [isOpen, result])
 
   const handleSelect = (quizId, optionId) => {
+    if (!quizId) return
     setAnswers((prev) => ({ ...prev, [quizId]: optionId }))
   }
 
-  const answeredCount  = Object.keys(answers).length
+  const answeredCount  = quizzes.filter(q => answers[getQuizId(q)]).length
   const totalQuestions = quizzes.length
   const allAnswered    = answeredCount === totalQuestions && totalQuestions > 0
   const canSubmit      = allAnswered && !isSubmitting
 
   const handleSubmit = () => {
     if (!canSubmit) return
-    const payload = Object.entries(answers).map(([quizId, selectedOptionId]) => ({
-      quizId,
-      selectedOptionId,
-    }))
+    const payload = quizzes.map((q) => {
+      const qId = getQuizId(q)
+      return {
+        quizId: qId,
+        selectedOptionId: answers[qId],
+      }
+    })
     onSubmit?.(payload)
   }
 
@@ -370,15 +379,18 @@ const QuizModal = ({
                     )}
 
                     {/* Questions */}
-                    {quizzes.map((quiz, i) => (
-                      <QuizQuestion
-                        key={quiz.id}
-                        quiz={quiz}
-                        index={i}
-                        selectedOptionId={answers[quiz.id] || null}
-                        onSelect={handleSelect}
-                      />
-                    ))}
+                    {quizzes.map((quiz, i) => {
+                      const qId = getQuizId(quiz)
+                      return (
+                        <QuizQuestion
+                          key={qId || i}
+                          quiz={quiz}
+                          index={i}
+                          selectedOptionId={qId ? answers[qId] : null}
+                          onSelect={handleSelect}
+                        />
+                      )
+                    })}
                   </>
                 )}
               </div>
@@ -388,12 +400,22 @@ const QuizModal = ({
                 <>
                   <div className="mx-6 h-px bg-stone-100" />
                   <div className="px-6 py-4 shrink-0 flex items-center justify-between gap-3">
-                    {/* Helper text */}
-                    <p className="text-xs text-stone-400">
-                      {allAnswered
-                        ? 'All questions answered — ready to submit!'
-                        : `${totalQuestions - answeredCount} question${totalQuestions - answeredCount !== 1 ? 's' : ''} remaining`}
-                    </p>
+                    {/* Helper text / Close */}
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors focus:outline-none"
+                      >
+                        Close
+                      </button>
+                      <p className="text-xs text-stone-400 hidden sm:block">
+                        {allAnswered
+                          ? 'All questions answered — ready to submit!'
+                          : `${totalQuestions - answeredCount} question${totalQuestions - answeredCount !== 1 ? 's' : ''} remaining`}
+                      </p>
+                    </div>
 
                     {/* Submit button */}
                     <motion.button

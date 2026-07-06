@@ -255,7 +255,7 @@ const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, 
 
       {/* Pomodoro label */}
       <p className="text-xs text-stone-400 -mt-4">
-        Pomodoro · {POMODORO_SECONDS / 60} min session
+        Pomodoro · {Math.max(1, Math.round(POMODORO_SECONDS / 60))} min session
       </p>
     </div>
   )
