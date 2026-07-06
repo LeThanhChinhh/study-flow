@@ -31,7 +31,7 @@ const STATUS_RING_COLOR = {
 }
 
 // FocusTimer owns the countdown state and exposes control handlers
-const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete }) => {
+const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete, disabled }) => {
   const progress = secondsLeft / POMODORO_SECONDS
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress)
   const isFocusing = status === 'focusing'
@@ -209,11 +209,12 @@ const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, 
         {(isReady || isPaused) && (
           <motion.button
             id="focus-timer-start"
-            onClick={isReady ? onStart : onResume}
-            whileTap={{ scale: 0.95 }}
-            whileHover={{ scale: 1.03 }}
+            onClick={disabled ? undefined : (isReady ? onStart : onResume)}
+            disabled={disabled}
+            whileTap={!disabled ? { scale: 0.95 } : {}}
+            whileHover={!disabled ? { scale: 1.03 } : {}}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className="flex items-center gap-2 px-7 py-3 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white font-semibold text-sm rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 transition-colors duration-150"
+            className={`flex items-center gap-2 px-7 py-3 ${disabled ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white'} font-semibold text-sm rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 transition-colors duration-150`}
             aria-label={isReady ? 'Start focus session' : 'Resume focus session'}
           >
             <StudyIcon name="play" size={14} strokeWidth={2.5}/>

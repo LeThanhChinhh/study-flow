@@ -48,10 +48,15 @@ const STEPS = [
   },
 ]
 
-const SAMPLE_TASKS = [
-  { title: 'Đọc và tóm tắt nội dung chính', duration: '25 min' },
-  { title: 'Ôn tập các ý quan trọng', duration: '25 min' },
-]
+const hasValidParsedTasks = (rawJson) => {
+  if (!rawJson || !Array.isArray(rawJson.modules) || rawJson.modules.length === 0) return false;
+  return rawJson.modules.some(m => Array.isArray(m.tasks) && m.tasks.length > 0);
+}
+
+const getAllParsedTasks = (rawJson) => {
+  if (!rawJson || !Array.isArray(rawJson.modules)) return [];
+  return rawJson.modules.flatMap(m => Array.isArray(m.tasks) ? m.tasks : []);
+}
 
 const Stepper = ({ currentStep }) => (
   <div className="card p-4">
@@ -190,7 +195,7 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
             {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'AI parsing status'}
           </h3>
           <p className="text-xs text-stone-400 mt-0.5">
-            {parsedMaterial ? 'Material parsed successfully.' : 'Polling every 3 seconds...'}
+            {parsedMaterial ? 'Material parsed successfully.' : errorMsg ? 'Parsing stopped. Please go back and try again.' : 'Polling every 3 seconds...'}
           </p>
         </div>
       </div>
@@ -207,27 +212,44 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
 )
 
 const ScheduleStep = ({ parsedMaterial }) => {
-  const tasks = parsedMaterial?.rawJson?.modules?.[0]?.tasks || SAMPLE_TASKS;
+  const rawJson = parsedMaterial?.rawJson;
+  const isValid = hasValidParsedTasks(rawJson);
+  
+  if (!isValid) {
+    return (
+      <div className="space-y-4 text-center py-6">
+        <StudyIcon name="alert-triangle" size={32} className="text-amber-500 mx-auto mb-2" />
+        <h3 className="text-sm font-semibold text-stone-800">No tasks generated</h3>
+        <p className="text-xs text-stone-500 max-w-sm mx-auto">
+          Parsed material has no tasks to schedule. Please try uploading a different document.
+        </p>
+      </div>
+    )
+  }
+
+  const tasks = getAllParsedTasks(rawJson);
+  const moduleCount = rawJson.modules.length;
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
         <div className="flex items-center gap-3 mb-4">
           <IconBadge name="layers" bg="bg-white" icon="text-violet-600" badgeSize="w-9 h-9" />
           <div>
-            <h3 className="text-sm font-semibold text-stone-800">{parsedMaterial?.rawJson?.modules?.[0]?.title || 'Tổng quan tài liệu'}</h3>
-            <p className="text-xs text-stone-400">{parsedMaterial?.rawJson?.modules?.length || 1} module · {tasks.length} generated tasks</p>
+            <h3 className="text-sm font-semibold text-stone-800">{rawJson.modules[0]?.title || 'Overview'}</h3>
+            <p className="text-xs text-stone-400">{moduleCount} module{moduleCount > 1 ? 's' : ''} · {tasks.length} generated tasks</p>
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
           {tasks.map((task, index) => (
             <div key={index} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 border border-white px-3 py-2">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-6 h-6 rounded-lg bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold">
+                <span className="w-6 h-6 rounded-lg bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold shrink-0">
                   {index + 1}
                 </span>
                 <p className="text-sm font-medium text-stone-700 truncate">{task.title}</p>
               </div>
-              <span className="badge bg-stone-100 text-stone-500 shrink-0">{task.estimatedMinutes ? `${task.estimatedMinutes} min` : task.duration}</span>
+              <span className="badge bg-stone-100 text-stone-500 shrink-0">{task.estimatedMinutes ? `${task.estimatedMinutes} min` : '25 min'}</span>
             </div>
           ))}
         </div>
@@ -255,7 +277,6 @@ const PlanningPage = () => {
   const [fileForm, setFileForm] = useState(null)
 
   const [createdGoal, setCreatedGoal] = useState(null)
-  const [createdTimeSlots, setCreatedTimeSlots] = useState([]) // eslint-disable-line no-unused-vars
   const [jobId, setJobId] = useState(null)
   const [parsedMaterial, setParsedMaterial] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -299,6 +320,7 @@ const PlanningPage = () => {
   }, [currentStep, jobId, parsedMaterial, errorMsg]);
 
   const goNext = async () => {
+    const currentError = errorMsg;
     setErrorMsg('');
     setIsLoading(true);
     try {
@@ -314,16 +336,19 @@ const PlanningPage = () => {
             throw new Error("Invalid time slot: Start time must be before end time");
           }
         }
-        const created = await Promise.all(timeSlotsForm.map(ts => createTimeSlot(ts)));
-        setCreatedTimeSlots(created);
+        await Promise.all(timeSlotsForm.map(ts => createTimeSlot(ts)));
       } else if (currentStep === 2) {
         if (!fileForm) throw new Error("Please select a PDF file");
         const res = await uploadMaterial(fileForm, createdGoal?.id);
         setJobId(res.jobId);
       } else if (currentStep === 3) {
-        if (!parsedMaterial) throw new Error("Wait for AI parsing to complete");
+        if (!parsedMaterial) {
+          if (currentError) throw new Error(currentError);
+          throw new Error("Wait for AI parsing to complete");
+        }
       } else if (currentStep === 4) {
         if (!createdGoal?.id || !parsedMaterial?.id) throw new Error("Missing data to generate schedule");
+        if (!hasValidParsedTasks(parsedMaterial?.rawJson)) throw new Error("Parsed material has no tasks to schedule");
         try {
           await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
           navigate('/dashboard');
@@ -445,7 +470,7 @@ const PlanningPage = () => {
             <button type="button" className="btn-ghost w-full sm:w-auto justify-center" onClick={goBack} disabled={isLoading}>
               {currentStep === 0 ? 'Cancel' : 'Previous step'}
             </button>
-            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial && !errorMsg)}>
+            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial && !errorMsg) || (currentStep === 4 && !hasValidParsedTasks(parsedMaterial?.rawJson))}>
               {isLoading && currentStep === STEPS.length - 1 ? 'Generating schedule...' : isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Generate schedule & go to dashboard' : 'Continue'}
               {!isLoading && <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />}
             </button>

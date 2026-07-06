@@ -46,6 +46,7 @@ const DashboardPage = () => {
   
   const [tasks, setTasks] = useState([])
   const [upcomingTasks, setUpcomingTasks] = useState([])
+  const [allTasks, setAllTasks] = useState([])
   const [isTasksLoading, setIsTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState(null)
 
@@ -91,10 +92,12 @@ const DashboardPage = () => {
 
         setTasks(todayTasks)
         setUpcomingTasks(futureTasks.slice(0, 3))
+        setAllTasks(mappedTasks)
       } catch (err) {
         console.error('Failed to fetch tasks:', err)
         setTasks([])
         setUpcomingTasks([])
+        setAllTasks([])
         setTasksError('Could not load tasks.')
       } finally {
         setIsTasksLoading(false)
@@ -114,14 +117,19 @@ const DashboardPage = () => {
   }
 
   const remainingTasksCount = tasks.filter(t => t.status !== 'done').length
-  const nextFocusTask = tasks.find(t => t.status === 'active') || tasks.find(t => t.status === 'pending')
+  const nextFocusTask =
+  tasks.find(t => t.status === 'active') ||
+  tasks.find(t => t.status === 'pending') ||
+  upcomingTasks.find(t => t.status === 'active') ||
+  upcomingTasks.find(t => t.status === 'pending')
 
   const handleStartFocus = () => {
     if (nextFocusTask?.id) {
-      navigate(`/focus?taskId=${nextFocusTask.id}`)
-    } else {
-      navigate('/focus')
-    }
+    navigate(`/focus?taskId=${nextFocusTask.id}`)
+    return
+  }
+
+  navigate('/planning')
   }
 
   const handleOpenPlanning = () => {
@@ -156,15 +164,15 @@ const DashboardPage = () => {
               onTaskClick={(taskId) => navigate(`/focus?taskId=${taskId}`)}
             />
           </div>
-          <div className="lg:col-span-2"><FocusSessionCard onStartFocus={handleStartFocus} activeTask={nextFocusTask} /></div>
+          <div className="lg:col-span-2"><FocusSessionCard onStartFocus={handleStartFocus} onCreateGoal={handleOpenPlanning} activeTask={nextFocusTask} /></div>
         </div>
 
         <div
           className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise"
           style={{ animationDelay: '0.18s' }}
         >
-          <div className="lg:col-span-2"><StudyStreakCard /></div>
-          <div className="lg:col-span-3"><LearningProgressCard /></div>
+          <div className="lg:col-span-2"><StudyStreakCard user={user} /></div>
+          <div className="lg:col-span-3"><LearningProgressCard user={user} tasks={allTasks} onCreateGoal={handleOpenPlanning} /></div>
         </div>
 
         <QuickActionsBar

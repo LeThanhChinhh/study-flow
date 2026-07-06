@@ -1,24 +1,6 @@
 // Mock data for the Focus Workspace page.
 // Replace with real API data in a later sprint.
 
-export const FOCUS_TASK = {
-  title: 'Problem Set 2: Binary Trees',
-  subject: 'Algorithms',
-  module: 'CS Fundamentals',
-  estimatedMins: 25,
-  intentions: [
-    'Understand in-order, pre-order, post-order traversal',
-    'Solve at least 3 practice problems',
-    'Write out time complexity for each approach',
-  ],
-}
-
-export const FOCUS_PROGRESS = {
-  sessionsToday: 1,
-  minutesToday: 25,
-  sessionGoal: 3,
-  minuteGoal: 75,
-}
 
 export const FOCUS_TIPS = [
   'Work on one problem at a time — depth beats breadth.',
@@ -29,7 +11,7 @@ export const FOCUS_TIPS = [
 ]
 
 export const RECALL_HINT =
-  'After this session, try to explain binary tree traversal from memory before checking your notes.'
+  'After the timer ends, answer a short recall quiz to reinforce what you studied.'
 
 export const BREAK_SUGGESTION = 'Short break in ~24 min — stand up, stretch, hydrate.'
 
