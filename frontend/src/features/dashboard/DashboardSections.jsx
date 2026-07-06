@@ -112,7 +112,7 @@ export const TaskDot = ({ status }) => {
 }
 
 /* Today's Flow card */
-export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null }) => {
+export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null, onTaskClick }) => {
   const doneCount = tasks.filter(t => t.status === 'done').length
   const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
@@ -179,7 +179,11 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
               <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Upcoming tasks</h3>
               <ul className="space-y-3">
                 {upcomingTasks.map(task => (
-                  <li key={task.id} className="flex flex-col gap-1">
+                  <li 
+                    key={task.id} 
+                    className="flex flex-col gap-1 cursor-pointer hover:bg-stone-100/70 p-2 -mx-2 rounded-xl transition-colors"
+                    onClick={() => onTaskClick?.(task.id)}
+                  >
                     <p className="text-sm font-medium text-stone-700 leading-snug">{task.title}</p>
                     <p className="text-xs text-stone-400">
                       {task.scheduledDate} {task.startTime ? `· ${task.startTime}` : ''}
@@ -196,17 +200,21 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
             {tasks.map((task, idx) => {
               const isLast = idx === tasks.length - 1
               return (
-                <li key={task.id} className="flex gap-3">
+                <li 
+                  key={task.id} 
+                  className="flex gap-3 group cursor-pointer" 
+                  onClick={() => onTaskClick?.(task.id)}
+                >
                   {/* Connector */}
                   <div className="flex flex-col items-center">
                     <TaskDot status={task.status} />
-                    {!isLast && <div className="w-px flex-1 mt-1.5 bg-stone-100" />}
+                    {!isLast && <div className="w-px flex-1 mt-1.5 bg-stone-100 group-hover:bg-stone-200 transition-colors" />}
                   </div>
 
                   {/* Row content */}
-                  <div className={`task-row ${isLast ? 'pb-0' : 'pb-3'}`}>
+                  <div className={`task-row flex-1 ${isLast ? 'pb-0' : 'pb-3'}`}>
                     <div
-                      className={`task-row-inner${task.status === 'active' ? ' is-active' : ''}`}
+                      className={`task-row-inner group-hover:bg-stone-50/80 transition-colors rounded-xl px-3 py-2 -mx-3 -my-2 ${task.status === 'active' ? ' is-active' : ''}`}
                     >
                       <div className="min-w-0">
                         <p className={`text-sm leading-snug ${

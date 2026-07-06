@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getTaskById } from '../../api/taskApi'
+import { savePomodoroLog } from '../../api/pomodoroApi'
+import { generateQuiz, submitQuiz } from '../../api/quizApi'
 import { motion } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 import FocusDecor from './FocusDecor'
 import FocusTimer from './FocusTimer'
 import { CurrentTaskPanel, SupportPanel } from './FocusPanels'
+import QuizModal from './QuizModal'
 import { POMODORO_SECONDS } from './focusData'
 
 // Timer status values: 'ready' | 'focusing' | 'paused' | 'complete'
@@ -49,6 +52,16 @@ const FocusWorkspace = () => {
   const [currentTask, setCurrentTask] = useState(null)
   const [isTaskLoading, setIsTaskLoading] = useState(false)
   const [taskError, setTaskError] = useState(null)
+
+  // Completion & Quiz state
+  const [isCompletingSession, setIsCompletingSession] = useState(false)
+  const [quizList, setQuizList] = useState([])
+  const [quizError, setQuizError] = useState(null)
+  const [isQuizOpen, setIsQuizOpen] = useState(false)
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false)
+  const [quizResult, setQuizResult] = useState(null)
+  
+  const hasHandledCompletionRef = useRef(false)
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -120,7 +133,64 @@ const FocusWorkspace = () => {
     clearTick()
     setSecondsLeft(POMODORO_SECONDS)
     setStatus('ready')
+    hasHandledCompletionRef.current = false
   }
+
+  const handleTimerComplete = async () => {
+    if (!currentTask?.id) {
+      setQuizError('No current task found to generate quiz.')
+      setIsQuizOpen(true)
+      return
+    }
+    if (hasHandledCompletionRef.current) return
+    hasHandledCompletionRef.current = true
+
+    try {
+      setIsCompletingSession(true)
+      setQuizError(null)
+
+      // 1. Save Pomodoro Log
+      await savePomodoroLog({
+        taskId: currentTask.id,
+        focusMinutes: Math.max(1, Math.round(POMODORO_SECONDS / 60))
+      })
+
+      // 2. Generate Quiz
+      const quizzes = await generateQuiz({
+        taskId: currentTask.id
+      })
+      
+      setQuizList(quizzes)
+      setIsQuizOpen(true)
+    } catch (err) {
+      console.error('Failed to complete session:', err)
+      setQuizError(err.message || 'Failed to complete session and load quiz.')
+      setIsQuizOpen(true)
+    } finally {
+      setIsCompletingSession(false)
+    }
+  }
+
+  const handleQuizSubmit = async (answers) => {
+    if (isSubmittingQuiz) return
+    try {
+      setIsSubmittingQuiz(true)
+      setQuizError(null)
+      const result = await submitQuiz({
+        answers,
+        completeTaskAfterSubmit: true
+      })
+      setQuizResult(result)
+    } catch (err) {
+      console.error('Failed to submit quiz:', err)
+      setQuizError(err.message || 'Failed to submit quiz.')
+    } finally {
+      setIsSubmittingQuiz(false)
+    }
+  }
+
+  const handleCloseQuiz = () => setIsQuizOpen(false)
+  const handleBackToDashboard = () => navigate('/dashboard')
 
   return (
     <div className="relative min-h-screen">
@@ -209,6 +279,7 @@ const FocusWorkspace = () => {
               onPause={handlePause}
               onResume={handleResume}
               onReset={handleReset}
+              onComplete={handleTimerComplete}
             />
 
             {/* Session mode indicator (visible below the timer on all sizes) */}
@@ -221,7 +292,8 @@ const FocusWorkspace = () => {
                   'bg-stone-300'
                 }`}/>
                 <span className="text-xs text-stone-500 font-medium">
-                  {status === 'focusing' ? 'Session running' :
+                  {isCompletingSession ? 'Saving session and preparing quiz...' :
+                   status === 'focusing' ? 'Session running' :
                    status === 'complete' ? 'Great work!' :
                    status === 'paused'   ? 'Session paused' :
                    'Ready when you are'}
@@ -241,6 +313,17 @@ const FocusWorkspace = () => {
           </motion.div>
         </div>
       </motion.main>
+
+      <QuizModal 
+        isOpen={isQuizOpen}
+        quizzes={quizList}
+        isSubmitting={isSubmittingQuiz}
+        error={quizError}
+        result={quizResult}
+        onSubmit={handleQuizSubmit}
+        onClose={handleCloseQuiz}
+        onBackToDashboard={handleBackToDashboard}
+      />
     </div>
   )
 }

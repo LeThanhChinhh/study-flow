@@ -148,7 +148,13 @@ const DashboardPage = () => {
           style={{ animationDelay: '0.08s' }}
         >
           <div className="lg:col-span-3">
-            <TodayFlowCard tasks={tasks} upcomingTasks={upcomingTasks} isLoading={isTasksLoading} error={tasksError} />
+            <TodayFlowCard 
+              tasks={tasks} 
+              upcomingTasks={upcomingTasks} 
+              isLoading={isTasksLoading} 
+              error={tasksError} 
+              onTaskClick={(taskId) => navigate(`/focus?taskId=${taskId}`)}
+            />
           </div>
           <div className="lg:col-span-2"><FocusSessionCard onStartFocus={handleStartFocus} activeTask={nextFocusTask} /></div>
         </div>
