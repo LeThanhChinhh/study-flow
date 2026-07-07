@@ -121,6 +121,7 @@ const DashboardPage = () => {
   }
 
   const remainingTasksCount = tasks.filter(t => t.status !== 'done').length
+  const hasIncompleteTasks = allTasks.some(t => t.status !== 'done')
   const nextFocusTask =
     tasks.find(t => t.status === 'active') ||
     tasks.find(t => t.status === 'pending') ||
@@ -167,6 +168,7 @@ const DashboardPage = () => {
               isLoading={isTasksLoading} 
               error={tasksError}
               hasAnyTasks={allTasks.length > 0}
+              hasIncompleteTasks={hasIncompleteTasks}
               onTaskClick={(taskId) => navigate(`/focus?taskId=${taskId}`)}
               onRetry={handleRetry}
               onCreatePlan={handleOpenPlanning}

@@ -10,6 +10,106 @@ import { createTimeSlot } from '../api/timeSlotApi'
 import { uploadMaterial, getMaterialStatus } from '../api/materialApi'
 import { generateSchedule } from '../api/scheduleApi'
 
+const formatTime12Hour = (time) => {
+  if (!time) return ''
+  const [hourRaw, minute = '00'] = time.split(':')
+  const hour = Number(hourRaw)
+  if (Number.isNaN(hour)) return time
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${minute} ${period}`
+}
+
+const DAY_LABELS = {
+  1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'
+}
+
+const formatLocalDate = () => {
+  const date = new Date()
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const getDayOfWeekForDate = (dateStr) => {
+  const date = new Date(`${dateStr}T00:00:00`)
+  const day = date.getDay()
+  return day === 0 ? 7 : day
+}
+
+const timeToMinutes = (time) => {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+const getCurrentMinutes = () => {
+  const now = new Date()
+  return now.getHours() * 60 + now.getMinutes()
+}
+
+const padTime = (value) => String(value).padStart(2, '0')
+
+const getNextHourSlot = () => {
+  const now = new Date()
+  const nextHour = Math.min(now.getHours() + 1, 23)
+  const endHour = Math.min(nextHour + 1, 23)
+
+  return {
+    startTime: `${padTime(nextHour)}:00`,
+    endTime: `${padTime(endHour)}:00`,
+  }
+}
+
+const addDays = (date, days) => {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
+
+const toLocalDateString = (date) => {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const getMatchingDatesForSlot = (startDate, deadline, dayOfWeek) => {
+  const dates = []
+  let cursor = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${deadline}T00:00:00`)
+  const targetDay = Number(dayOfWeek)
+
+  while (cursor <= end) {
+    const dateStr = toLocalDateString(cursor)
+    if (getDayOfWeekForDate(dateStr) === targetDay) {
+      dates.push(dateStr)
+    }
+    cursor = addDays(cursor, 1)
+  }
+
+  return dates
+}
+
+const hasFutureOccurrenceForSlot = (matchingDates, startTime) => {
+  const today = formatLocalDate()
+  const currentMinutes = getCurrentMinutes()
+  const startMinutes = timeToMinutes(startTime)
+
+  return matchingDates.some(dateStr => {
+    if (dateStr > today) return true
+    if (dateStr === today && startMinutes > currentMinutes) return true
+    return false
+  })
+}
+
+const getSuggestedDayOfWeekForGoal = (startDate, deadline) => {
+  const today = formatLocalDate()
+  const effectiveStart = startDate < today ? today : startDate
+  if (effectiveStart > deadline) return getDayOfWeekForDate(startDate)
+  return getDayOfWeekForDate(effectiveStart)
+}
+
 const STEPS = [
   {
     id: 'goal',
@@ -121,7 +221,7 @@ const GoalStep = ({ goalForm, setGoalForm }) => (
   </div>
 )
 
-const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
+const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => {
   const addSlot = () => setTimeSlotsForm([...timeSlotsForm, { dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }])
   
   const updateSlot = (index, field, value) => {
@@ -138,33 +238,50 @@ const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
   return (
     <div className="space-y-4">
       <p className="text-sm text-stone-500 mb-4">Add the time windows you usually use for studying. AI will schedule tasks within these slots.</p>
-      {timeSlotsForm.map((slot, i) => (
-        <div key={i} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-4 rounded-2xl bg-stone-50/50 border border-stone-100 relative">
-          <label className="block flex-1 min-w-[120px]">
-            <span className="label-overline block mb-1.5">Day</span>
-            <select className="input-field py-2.5" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
-              <option value="1">Monday</option>
-              <option value="2">Tuesday</option>
-              <option value="3">Wednesday</option>
-              <option value="4">Thursday</option>
-              <option value="5">Friday</option>
-              <option value="6">Saturday</option>
-              <option value="7">Sunday</option>
-            </select>
-          </label>
-          <label className="block w-28">
-            <span className="label-overline block mb-1.5">Start</span>
-            <input className="input-field py-2.5" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
-          </label>
-          <label className="block w-28">
-            <span className="label-overline block mb-1.5">End</span>
-            <input className="input-field py-2.5" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
-          </label>
-          <button type="button" className="w-[42px] h-[42px] rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0" onClick={() => removeSlot(i)} aria-label="Remove slot">
-            <StudyIcon name="x" size={16} />
-          </button>
+      {timeSlotsForm.map((slot, i) => {
+        const today = formatLocalDate()
+        const todayDayOfWeek = getDayOfWeekForDate(today)
+        const isTodaySlot = Number(slot.dayOfWeek) === todayDayOfWeek && goalForm?.startDate <= today && goalForm?.deadline >= today
+        
+        return (
+        <div key={i} className="flex flex-col gap-2 p-4 rounded-2xl bg-stone-50/50 border border-stone-100 relative">
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-3">
+            <label className="block flex-1 min-w-[120px]">
+              <span className="label-overline block mb-1.5">Day</span>
+              <select className="input-field py-2.5" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+              </select>
+            </label>
+            <label className="block min-w-[140px]">
+              <span className="label-overline block mb-1.5">Start</span>
+              <input className="input-field py-2.5" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
+            </label>
+            <label className="block min-w-[140px]">
+              <span className="label-overline block mb-1.5">End</span>
+              <input className="input-field py-2.5" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
+            </label>
+            <button type="button" className="w-[42px] h-[42px] rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0" onClick={() => removeSlot(i)} aria-label="Remove slot">
+              <StudyIcon name="x" size={16} />
+            </button>
+          </div>
+          <div>
+            <p className="text-xs text-stone-500 font-medium ml-1">
+              {DAY_LABELS[slot.dayOfWeek]} · {formatTime12Hour(slot.startTime)} – {formatTime12Hour(slot.endTime)}
+            </p>
+            {isTodaySlot && (
+              <p className="text-[11px] text-stone-400 ml-1 mt-0.5">
+                For today, choose a start time later than now.
+              </p>
+            )}
+          </div>
         </div>
-      ))}
+      )})}
       <button type="button" className="btn-ghost text-sm w-full border border-dashed border-stone-200 hover:border-stone-300 py-3 rounded-2xl mt-2" onClick={addSlot}>
         <StudyIcon name="plus" size={14} /> Add Time Slot
       </button>
@@ -186,7 +303,7 @@ const UploadStep = ({ fileForm, setFileForm }) => (
         </span>
       ) : 'Upload your textbook, notes, or syllabus. We will extract the study tasks for you.'}
     </p>
-    <label className="btn-primary mt-6 inline-flex cursor-pointer shadow-sm">
+    <label className="mt-6 mx-auto inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition-colors cursor-pointer">
       <StudyIcon name="file-text" size={14} />
       {fileForm ? 'Choose a different file' : 'Browse files'}
       <input type="file" accept=".pdf" className="hidden" onChange={e => setFileForm(e.target.files[0])} />
@@ -303,7 +420,7 @@ const ScheduleStep = ({ parsedMaterial }) => {
 
 const StepContent = ({ stepId, state }) => {
   if (stepId === 'goal') return <GoalStep goalForm={state.goalForm} setGoalForm={state.setGoalForm} />
-  if (stepId === 'slots') return <TimeSlotsStep timeSlotsForm={state.timeSlotsForm} setTimeSlotsForm={state.setTimeSlotsForm} />
+  if (stepId === 'slots') return <TimeSlotsStep timeSlotsForm={state.timeSlotsForm} setTimeSlotsForm={state.setTimeSlotsForm} goalForm={state.goalForm} />
   if (stepId === 'upload') return <UploadStep fileForm={state.fileForm} setFileForm={state.setFileForm} />
   if (stepId === 'polling') return <PollingStep parsedMaterial={state.parsedMaterial} errorMsg={state.errorMsg} />
   return <ScheduleStep parsedMaterial={state.parsedMaterial} />
@@ -372,11 +489,56 @@ const PlanningPage = () => {
         if (goalForm.deadline < goalForm.startDate) throw new Error("Deadline must be >= Start date");
         const res = await createGoal(goalForm);
         setCreatedGoal(res);
+        
+        if (timeSlotsForm.length === 1 && timeSlotsForm[0].dayOfWeek === 1 && timeSlotsForm[0].startTime === '08:00' && timeSlotsForm[0].endTime === '09:00') {
+          const suggestedDay = getSuggestedDayOfWeekForGoal(goalForm.startDate, goalForm.deadline)
+          let defaultStart = '08:00'
+          let defaultEnd = '09:00'
+          
+          const today = formatLocalDate()
+          const todayDayOfWeek = getDayOfWeekForDate(today)
+          const effectiveStart = goalForm.startDate < today ? today : goalForm.startDate
+          
+          if (suggestedDay === todayDayOfWeek && effectiveStart === today) {
+            const nextSlot = getNextHourSlot()
+            defaultStart = nextSlot.startTime
+            defaultEnd = nextSlot.endTime
+          }
+
+          setTimeSlotsForm([{ dayOfWeek: suggestedDay, startTime: defaultStart, endTime: defaultEnd }])
+        }
       } else if (currentStep === 1) {
         if (timeSlotsForm.length === 0) throw new Error("At least 1 time slot required");
+
         for (const slot of timeSlotsForm) {
           if (!slot.startTime || !slot.endTime || slot.startTime >= slot.endTime) {
             throw new Error("Invalid time slot: Start time must be before end time");
+          }
+
+          const matchingDates = getMatchingDatesForSlot(
+            goalForm.startDate,
+            goalForm.deadline,
+            slot.dayOfWeek
+          )
+
+          if (matchingDates.length === 0) {
+            throw new Error(
+              `${DAY_LABELS[slot.dayOfWeek]} is outside your goal date range. Choose a day between the start date and deadline.`
+            )
+          }
+
+          if (!hasFutureOccurrenceForSlot(matchingDates, slot.startTime)) {
+            const today = formatLocalDate()
+            const startMinutes = timeToMinutes(slot.startTime)
+            const currentMinutes = getCurrentMinutes()
+            
+            if (matchingDates.includes(today) && startMinutes <= currentMinutes) {
+              throw new Error("This time window already started. Choose a start time later than now.")
+            }
+
+            throw new Error(
+              "Selected time slot is in the past. Choose a future time window within your goal dates."
+            )
           }
         }
         await Promise.all(timeSlotsForm.map(ts => createTimeSlot(ts)));
@@ -397,16 +559,32 @@ const PlanningPage = () => {
           navigate('/dashboard');
         } catch (err) {
           const errMsg = err?.message || err?.data?.message || "";
+          const normalizedErr = errMsg.toLowerCase();
 
-          if (err?.status === 409 || errMsg.includes('already generated')) {
+          if (err?.status === 409 || normalizedErr.includes('already generated')) {
             throw new Error("Schedule was already generated for this goal.");
           }
 
-          if (err?.status === 400 || errMsg.toLowerCase().includes('parsed') || errMsg.toLowerCase().includes('invalid')) {
+          if (
+            normalizedErr.includes('parsed') ||
+            normalizedErr.includes('rawjson') ||
+            normalizedErr.includes('raw json') ||
+            normalizedErr.includes('material') ||
+            normalizedErr.includes('document')
+          ) {
             throw new Error("We could not parse this document properly. Try a clearer text-based PDF.");
           }
 
-          throw new Error(errMsg || "Failed to generate schedule");
+          if (
+            normalizedErr.includes('time slot') ||
+            normalizedErr.includes('availability') ||
+            normalizedErr.includes('schedule') ||
+            normalizedErr.includes('available')
+          ) {
+            throw new Error("Could not generate schedule with the selected time slots. Try adding future availability.");
+          }
+
+          throw new Error(errMsg || "Failed to generate schedule.");
         }
         return;
       }

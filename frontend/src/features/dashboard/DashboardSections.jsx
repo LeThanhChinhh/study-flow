@@ -125,7 +125,7 @@ export const TaskDot = ({ status }) => {
 }
 
 /* Today's Flow card */
-export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null, hasAnyTasks = false, onTaskClick, onRetry, onCreatePlan }) => {
+export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null, hasAnyTasks = false, hasIncompleteTasks = false, onTaskClick, onRetry, onCreatePlan }) => {
   const doneCount = tasks.filter(t => t.status === 'done').length
   const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
@@ -157,11 +157,11 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
       </div>
 
       {/* States */}
-      <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col">
 
         {/* Loading skeleton */}
         {isLoading && (
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 my-auto">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex gap-3">
                 <div className="w-5 h-5 rounded-full bg-stone-100 shrink-0 mt-0.5 animate-pulse" />
@@ -176,7 +176,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Error state */}
         {!isLoading && error && (
-          <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
+          <div className="flex flex-col items-center justify-center py-6 text-center gap-3 my-auto">
             <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
               <StudyIcon name="alert-circle" size={20} className="text-red-400" />
             </div>
@@ -199,7 +199,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Global empty state — no tasks ever created */}
         {!isLoading && !error && !hasAnyTasks && (
-          <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+          <div className="flex flex-col items-center justify-center py-8 text-center gap-3 my-auto">
             <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center">
               <StudyIcon name="book-open" size={22} className="text-violet-400" />
             </div>
@@ -222,7 +222,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Today empty, but has upcoming */}
         {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length > 0 && (
-          <div className="flex flex-col w-full">
+          <div className="flex flex-col w-full my-auto">
             <div className="flex flex-col items-center justify-center py-4 text-center mb-2">
               <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
               <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
@@ -266,10 +266,20 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Today empty, no upcoming either (but tasks exist on other days) */}
         {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <StudyIcon name="check-circle" size={24} className="text-emerald-400 mb-2" />
-            <p className="text-sm font-semibold text-stone-700 mb-1">All caught up!</p>
-            <p className="text-xs text-stone-400">No tasks scheduled for today.</p>
+          <div className="flex flex-col items-center justify-center py-6 text-center my-auto">
+            {hasIncompleteTasks ? (
+              <>
+                <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
+                <p className="text-sm font-semibold text-stone-700 mb-1">No tasks scheduled for today.</p>
+                <p className="text-xs text-stone-400">You still have unfinished tasks. Review your schedule or create a new plan.</p>
+              </>
+            ) : (
+              <>
+                <StudyIcon name="check-circle" size={24} className="text-emerald-400 mb-2" />
+                <p className="text-sm font-semibold text-stone-700 mb-1">All caught up!</p>
+                <p className="text-xs text-stone-400">No tasks scheduled for today.</p>
+              </>
+            )}
           </div>
         )}
 
@@ -429,7 +439,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
           <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
           <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
         </div>
-        <button id="focus-start-btn" className="btn-accent w-full justify-center" onClick={onStartFocus}>
+        <button id="focus-start-btn" className="btn-accent w-full flex items-center justify-center gap-2" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
           Start session
         </button>
@@ -440,7 +450,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
           <p className="label-overline mb-1">No focus task yet</p>
           <p className="text-sm font-medium text-stone-700 leading-snug">Create a learning plan to start your first focus session.</p>
         </div>
-        <button id="focus-start-btn" className="btn-primary w-full justify-center" onClick={onCreateGoal}>
+        <button id="focus-start-btn" className="btn-primary w-full flex items-center justify-center gap-2" onClick={onCreateGoal}>
           <StudyIcon name="plus" size={14} strokeWidth={2.5} />
           Create learning plan
         </button>
