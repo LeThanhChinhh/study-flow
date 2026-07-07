@@ -141,17 +141,26 @@ const QuizResult = ({ result, onBackToDashboard }) => {
     >
       {/* Score ring */}
       <div
-        className={`w-24 h-24 rounded-full ${ringColor} flex items-center justify-center shadow-lg`}
+        className={`w-24 h-24 rounded-full ${ringColor} flex items-center justify-center shadow-lg relative`}
       >
         <span className="text-2xl font-bold text-white tabular-nums">
           {scorePercent}%
         </span>
+        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm border border-stone-100">
+          {isPerfect ? (
+            <StudyIcon name="trophy" size={16} className="text-emerald-500" />
+          ) : isPassing ? (
+            <StudyIcon name="check-circle" size={16} className="text-violet-500" />
+          ) : (
+            <StudyIcon name="bar-chart" size={16} className="text-rose-500" />
+          )}
+        </div>
       </div>
 
       {/* Message */}
       <div className="text-center">
         <h3 className={`text-xl font-bold ${scoreColor}`}>
-          {isPerfect ? 'Perfect Score! 🎉' : isPassing ? 'Well done! 🌟' : 'Keep practising 💪'}
+          {isPerfect ? 'Great recall!' : isPassing ? 'Good job!' : 'Good start — review this task once more.'}
         </h3>
         <p className="text-sm text-stone-500 mt-1">
           You got{' '}
@@ -189,7 +198,7 @@ const QuizResult = ({ result, onBackToDashboard }) => {
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
         className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white font-semibold text-sm rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 transition-colors duration-150"
       >
-        <StudyIcon name="layout-dashboard" size={14} />
+        <StudyIcon name="layers" size={14} />
         Back to Dashboard
       </motion.button>
     </motion.div>
@@ -304,18 +313,20 @@ const QuizModal = ({
               <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                    <StudyIcon name="brain" size={17} className="text-violet-600" />
+                    <StudyIcon name="zap" size={17} className="text-violet-600" />
                   </div>
                   <div>
-                    <p className="text-[10.5px] font-semibold uppercase tracking-widest text-stone-400">
-                      Knowledge Check
-                    </p>
                     <h2
                       id="quiz-modal-title"
-                      className="text-sm font-bold text-stone-800 leading-snug"
+                      className="text-base font-bold text-stone-800 leading-snug"
                     >
-                      {result ? 'Session Results' : 'Quick Recall Quiz'}
+                      {result ? 'Session Results' : 'Quick Recall'}
                     </h2>
+                    {!result && (
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        Answer these questions to lock in what you studied.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -350,14 +361,18 @@ const QuizModal = ({
                           {answeredCount} / {totalQuestions} answered
                         </span>
                         <div className="flex items-center gap-1.5">
-                          {quizzes.map((q) => (
-                            <div
-                              key={q.id}
-                              className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                                answers[q.id] ? 'bg-violet-500' : 'bg-stone-200'
-                              }`}
-                            />
-                          ))}
+                          {quizzes.map((q, index) => {
+                            const qId = getQuizId(q)
+
+                            return (
+                              <div
+                                key={qId || index}
+                                className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                                  qId && answers[qId] ? 'bg-violet-500' : 'bg-stone-200'
+                                }`}
+                              />
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -365,7 +380,7 @@ const QuizModal = ({
                     {/* Empty state */}
                     {totalQuestions === 0 && !error && (
                       <div className="flex flex-col items-center gap-3 py-8 text-stone-400">
-                        <StudyIcon name="loader" size={28} className="animate-spin text-violet-400" />
+                        <StudyIcon name="timer" size={28} className="animate-spin text-violet-400" />
                         <p className="text-sm">Loading questions…</p>
                       </div>
                     )}
@@ -437,12 +452,12 @@ const QuizModal = ({
                     >
                       {isSubmitting ? (
                         <>
-                          <StudyIcon name="loader" size={14} className="animate-spin" />
+                          <StudyIcon name="timer" size={14} className="animate-spin" />
                           Submitting…
                         </>
                       ) : (
                         <>
-                          <StudyIcon name="send" size={14} />
+                          <StudyIcon name="arrow-right" size={14} />
                           Submit
                         </>
                       )}

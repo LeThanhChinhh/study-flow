@@ -192,6 +192,9 @@ const FocusWorkspace = () => {
   const handleCloseQuiz = () => setIsQuizOpen(false)
   const handleBackToDashboard = () => navigate('/dashboard')
 
+  const isCurrentTaskCompleted =
+    currentTask?.status === 'COMPLETED' || currentTask?.status === 'done'
+
   return (
     <div className="relative min-h-screen">
       <FocusDecor/>
@@ -280,7 +283,8 @@ const FocusWorkspace = () => {
               onResume={handleResume}
               onReset={handleReset}
               onComplete={handleTimerComplete}
-              disabled={!currentTask || isTaskLoading}
+              disabled={!currentTask || isTaskLoading || isCompletingSession || isCurrentTaskCompleted}
+              isCompletingSession={isCompletingSession}
             />
 
             {/* Session mode indicator (visible below the timer on all sizes) */}
