@@ -10,6 +10,106 @@ import { createTimeSlot } from '../api/timeSlotApi'
 import { uploadMaterial, getMaterialStatus } from '../api/materialApi'
 import { generateSchedule } from '../api/scheduleApi'
 
+const formatTime12Hour = (time) => {
+  if (!time) return ''
+  const [hourRaw, minute = '00'] = time.split(':')
+  const hour = Number(hourRaw)
+  if (Number.isNaN(hour)) return time
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${minute} ${period}`
+}
+
+const DAY_LABELS = {
+  1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'
+}
+
+const formatLocalDate = () => {
+  const date = new Date()
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const getDayOfWeekForDate = (dateStr) => {
+  const date = new Date(`${dateStr}T00:00:00`)
+  const day = date.getDay()
+  return day === 0 ? 7 : day
+}
+
+const timeToMinutes = (time) => {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+const getCurrentMinutes = () => {
+  const now = new Date()
+  return now.getHours() * 60 + now.getMinutes()
+}
+
+const padTime = (value) => String(value).padStart(2, '0')
+
+const getNextHourSlot = () => {
+  const now = new Date()
+  const nextHour = Math.min(now.getHours() + 1, 23)
+  const endHour = Math.min(nextHour + 1, 23)
+
+  return {
+    startTime: `${padTime(nextHour)}:00`,
+    endTime: `${padTime(endHour)}:00`,
+  }
+}
+
+const addDays = (date, days) => {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
+
+const toLocalDateString = (date) => {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const getMatchingDatesForSlot = (startDate, deadline, dayOfWeek) => {
+  const dates = []
+  let cursor = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${deadline}T00:00:00`)
+  const targetDay = Number(dayOfWeek)
+
+  while (cursor <= end) {
+    const dateStr = toLocalDateString(cursor)
+    if (getDayOfWeekForDate(dateStr) === targetDay) {
+      dates.push(dateStr)
+    }
+    cursor = addDays(cursor, 1)
+  }
+
+  return dates
+}
+
+const hasFutureOccurrenceForSlot = (matchingDates, startTime) => {
+  const today = formatLocalDate()
+  const currentMinutes = getCurrentMinutes()
+  const startMinutes = timeToMinutes(startTime)
+
+  return matchingDates.some(dateStr => {
+    if (dateStr > today) return true
+    if (dateStr === today && startMinutes > currentMinutes) return true
+    return false
+  })
+}
+
+const getSuggestedDayOfWeekForGoal = (startDate, deadline) => {
+  const today = formatLocalDate()
+  const effectiveStart = startDate < today ? today : startDate
+  if (effectiveStart > deadline) return getDayOfWeekForDate(startDate)
+  return getDayOfWeekForDate(effectiveStart)
+}
+
 const STEPS = [
   {
     id: 'goal',
@@ -67,31 +167,31 @@ const Stepper = ({ currentStep }) => (
         return (
           <div
             key={step.id}
-            className={`rounded-2xl border px-3 py-3 transition-all duration-200 ${
+            className={`rounded-2xl border px-3 py-3 transition-all duration-300 ${
               isActive
-                ? 'bg-violet-50 border-violet-200 shadow-sm'
+                ? 'bg-violet-50 border-violet-200 shadow-sm scale-[1.02]'
                 : isDone
                   ? 'bg-emerald-50 border-emerald-100'
-                  : 'bg-white/70 border-stone-100'
+                  : 'bg-white/70 border-stone-100 opacity-60'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div
-                className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   isActive
-                    ? 'bg-violet-600 text-white'
+                    ? 'bg-violet-600 text-white shadow-sm'
                     : isDone
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-emerald-500 text-white shadow-sm'
                       : 'bg-stone-100 text-stone-400'
                 }`}
               >
                 <StudyIcon name={isDone ? 'check' : step.icon} size={13} strokeWidth={2.2} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-stone-400">
+                <p className="text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-0.5">
                   {step.eyebrow}
                 </p>
-                <p className={`text-xs font-semibold truncate ${isActive ? 'text-violet-700' : 'text-stone-700'}`}>
+                <p className={`text-xs font-bold truncate ${isActive ? 'text-violet-700' : 'text-stone-700'}`}>
                   {step.title}
                 </p>
               </div>
@@ -104,23 +204,24 @@ const Stepper = ({ currentStep }) => (
 )
 
 const GoalStep = ({ goalForm, setGoalForm }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
     <label className="block md:col-span-2">
-      <span className="label-overline block mb-2">Goal title</span>
-      <input className="input-field" placeholder="Ví dụ: Ôn tập Công nghệ phần mềm" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
+      <span className="label-overline block mb-1.5">Goal title</span>
+      <input className="input-field" placeholder="e.g., Learn React Basics" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
+      <p className="text-[11px] text-stone-400 mt-1.5 font-medium">A clear goal helps AI organize your learning path.</p>
     </label>
     <label className="block">
-      <span className="label-overline block mb-2">Start date</span>
+      <span className="label-overline block mb-1.5">Start date</span>
       <input className="input-field" type="date" value={goalForm.startDate} onChange={e => setGoalForm({...goalForm, startDate: e.target.value})} />
     </label>
     <label className="block">
-      <span className="label-overline block mb-2">Deadline</span>
+      <span className="label-overline block mb-1.5">Deadline</span>
       <input className="input-field" type="date" value={goalForm.deadline} onChange={e => setGoalForm({...goalForm, deadline: e.target.value})} />
     </label>
   </div>
 )
 
-const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
+const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => {
   const addSlot = () => setTimeSlotsForm([...timeSlotsForm, { dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }])
   
   const updateSlot = (index, field, value) => {
@@ -136,48 +237,75 @@ const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
 
   return (
     <div className="space-y-4">
-      {timeSlotsForm.map((slot, i) => (
-        <div key={i} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <label className="block">
-            <span className="label-overline block mb-2">Day</span>
-            <select className="input-field" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
-              <option value="1">Monday</option>
-              <option value="2">Tuesday</option>
-              <option value="3">Wednesday</option>
-              <option value="4">Thursday</option>
-              <option value="5">Friday</option>
-              <option value="6">Saturday</option>
-              <option value="7">Sunday</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="label-overline block mb-2">Start</span>
-            <input className="input-field" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
-          </label>
-          <label className="block">
-            <span className="label-overline block mb-2">End</span>
-            <input className="input-field" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
-          </label>
-          <button type="button" className="btn-ghost mb-1" onClick={() => removeSlot(i)}>Remove</button>
+      <p className="text-sm text-stone-500 mb-4">Add the time windows you usually use for studying. AI will schedule tasks within these slots.</p>
+      {timeSlotsForm.map((slot, i) => {
+        const today = formatLocalDate()
+        const todayDayOfWeek = getDayOfWeekForDate(today)
+        const isTodaySlot = Number(slot.dayOfWeek) === todayDayOfWeek && goalForm?.startDate <= today && goalForm?.deadline >= today
+        
+        return (
+        <div key={i} className="flex flex-col gap-2 p-4 rounded-2xl bg-stone-50/50 border border-stone-100 relative">
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-3">
+            <label className="block flex-1 min-w-[120px]">
+              <span className="label-overline block mb-1.5">Day</span>
+              <select className="input-field py-2.5" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+              </select>
+            </label>
+            <label className="block min-w-[140px]">
+              <span className="label-overline block mb-1.5">Start</span>
+              <input className="input-field py-2.5" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
+            </label>
+            <label className="block min-w-[140px]">
+              <span className="label-overline block mb-1.5">End</span>
+              <input className="input-field py-2.5" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
+            </label>
+            <button type="button" className="w-[42px] h-[42px] rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0" onClick={() => removeSlot(i)} aria-label="Remove slot">
+              <StudyIcon name="x" size={16} />
+            </button>
+          </div>
+          <div>
+            <p className="text-xs text-stone-500 font-medium ml-1">
+              {DAY_LABELS[slot.dayOfWeek]} · {formatTime12Hour(slot.startTime)} – {formatTime12Hour(slot.endTime)}
+            </p>
+            {isTodaySlot && (
+              <p className="text-[11px] text-stone-400 ml-1 mt-0.5">
+                For today, choose a start time later than now.
+              </p>
+            )}
+          </div>
         </div>
-      ))}
-      <button type="button" className="btn-ghost" onClick={addSlot}>+ Add Time Slot</button>
+      )})}
+      <button type="button" className="btn-ghost text-sm w-full border border-dashed border-stone-200 hover:border-stone-300 py-3 rounded-2xl mt-2" onClick={addSlot}>
+        <StudyIcon name="plus" size={14} /> Add Time Slot
+      </button>
     </div>
   )
 }
 
 const UploadStep = ({ fileForm, setFileForm }) => (
-  <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50/40 p-8 text-center">
-    <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-      <StudyIcon name="upload" size={22} className="text-violet-600" />
+  <div className="rounded-3xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-10 text-center hover:bg-violet-50/60 transition-colors">
+    <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-violet-100">
+      <StudyIcon name="upload" size={24} className="text-violet-600" />
     </div>
     <h3 className="text-base font-semibold text-stone-800">Drop your PDF here</h3>
-    <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-      {fileForm ? fileForm.name : 'Select a PDF file to upload'}
+    <p className="text-sm text-stone-500 mt-1 max-w-sm mx-auto leading-relaxed">
+      {fileForm ? (
+        <span className="font-medium text-violet-700 flex items-center justify-center gap-1.5 mt-2">
+          <StudyIcon name="file-text" size={14} />
+          {fileForm.name} {fileForm.size ? `(${(fileForm.size / 1024 / 1024).toFixed(2)} MB)` : ''}
+        </span>
+      ) : 'Upload your textbook, notes, or syllabus. We will extract the study tasks for you.'}
     </p>
-    <label className="btn-ghost mt-5 inline-flex cursor-pointer">
+    <label className="mt-6 mx-auto inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition-colors cursor-pointer">
       <StudyIcon name="file-text" size={14} />
-      Choose PDF
+      {fileForm ? 'Choose a different file' : 'Browse files'}
       <input type="file" accept=".pdf" className="hidden" onChange={e => setFileForm(e.target.files[0])} />
     </label>
   </div>
@@ -185,17 +313,17 @@ const UploadStep = ({ fileForm, setFileForm }) => (
 
 const PollingStep = ({ parsedMaterial, errorMsg }) => (
   <div className="space-y-4">
-    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-5">
+    <div className={`rounded-2xl border p-5 ${parsedMaterial ? 'bg-emerald-50/50 border-emerald-100' : errorMsg ? 'bg-red-50/50 border-red-100' : 'bg-stone-50/80 border-stone-100'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${errorMsg ? 'bg-red-100 text-red-600' : 'bg-violet-100 text-violet-600'}`}>
-          <StudyIcon name={parsedMaterial ? "check" : errorMsg ? "alert-triangle" : "timer"} size={18} />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${parsedMaterial ? 'bg-emerald-100 text-emerald-600' : errorMsg ? 'bg-red-100 text-red-600' : 'bg-white text-violet-600 border border-violet-100'}`}>
+          <StudyIcon name={parsedMaterial ? "check" : errorMsg ? "alert-circle" : "timer"} size={18} className={!parsedMaterial && !errorMsg ? 'animate-pulse' : ''} />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-stone-800">
-            {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'AI parsing status'}
+          <h3 className={`text-sm font-semibold ${parsedMaterial ? 'text-emerald-800' : errorMsg ? 'text-red-800' : 'text-stone-800'}`}>
+            {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'Analyzing your document...'}
           </h3>
-          <p className="text-xs text-stone-400 mt-0.5">
-            {parsedMaterial ? 'Material parsed successfully.' : errorMsg ? 'Parsing stopped. We could not parse this document.' : 'Polling every 3 seconds...'}
+          <p className={`text-xs mt-0.5 ${parsedMaterial ? 'text-emerald-600' : errorMsg ? 'text-red-600' : 'text-stone-500'}`}>
+            {parsedMaterial ? 'Material parsed successfully. Ready to generate schedule.' : errorMsg ? 'We could not parse this document. Try a clearer text-based PDF.' : 'Extracting study tasks. This may take a moment.'}
           </p>
         </div>
       </div>
@@ -205,8 +333,9 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
         </div>
       )}
     </div>
-    <p className="text-sm text-stone-500">
-      When status becomes <span className="font-semibold text-emerald-600">COMPLETED</span>, the UI will unlock schedule generation.
+    <p className="text-xs text-stone-400 flex items-center justify-center gap-1.5 mt-4">
+      <StudyIcon name="timer" size={12} className={!parsedMaterial && !errorMsg ? 'animate-spin' : 'hidden'} />
+      {parsedMaterial ? 'You can now proceed to the next step.' : errorMsg ? 'Please go back and try another file.' : 'Please wait...'}
     </p>
   </div>
 )
@@ -217,11 +346,13 @@ const ScheduleStep = ({ parsedMaterial }) => {
   
   if (!isValid) {
     return (
-      <div className="space-y-4 text-center py-6">
-        <StudyIcon name="alert-triangle" size={32} className="text-amber-500 mx-auto mb-2" />
-        <h3 className="text-sm font-semibold text-stone-800">We could not find any study tasks in this document.</h3>
-        <p className="text-xs text-stone-500 max-w-sm mx-auto">
-          Try a clearer text-based PDF.
+      <div className="space-y-4 text-center py-10 px-4 card bg-red-50/30 border-red-100">
+        <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+          <StudyIcon name="alert-circle" size={28} className="text-red-500" />
+        </div>
+        <h3 className="text-base font-semibold text-stone-800">No tasks found</h3>
+        <p className="text-sm text-stone-500 max-w-sm mx-auto">
+          We could not extract any study tasks from this document. Try uploading a clearer, text-based PDF.
         </p>
       </div>
     )
@@ -229,27 +360,56 @@ const ScheduleStep = ({ parsedMaterial }) => {
 
   const tasks = getAllParsedTasks(rawJson);
   const moduleCount = rawJson.modules.length;
+  const totalMins = tasks.reduce((sum, t) => sum + (t.estimatedMinutes || 25), 0);
+  const totalHoursLabel =
+    totalMins < 60
+      ? '<1'
+      : (totalMins / 60).toFixed(1).replace('.0', '');
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">{moduleCount}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Modules</span>
+        </div>
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">{tasks.length}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Tasks</span>
+        </div>
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">~{totalHoursLabel}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Hours est.</span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-stone-200 bg-stone-50/50 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <IconBadge name="layers" bg="bg-white" icon="text-violet-600" badgeSize="w-9 h-9" />
+          <IconBadge name="layers" bg="bg-white" icon="text-violet-600" badgeSize="w-9 h-9 shadow-sm" />
           <div>
-            <h3 className="text-sm font-semibold text-stone-800">{rawJson.modules[0]?.title || 'Overview'}</h3>
-            <p className="text-xs text-stone-400">{moduleCount} module{moduleCount > 1 ? 's' : ''} · {tasks.length} generated tasks</p>
+            <h3 className="text-sm font-semibold text-stone-800">Curriculum Preview</h3>
+            <p className="text-xs text-stone-500">Tasks will be scheduled based on your availability.</p>
           </div>
         </div>
-        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-          {tasks.map((task, index) => (
-            <div key={index} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 border border-white px-3 py-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-6 h-6 rounded-lg bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold shrink-0">
-                  {index + 1}
-                </span>
-                <p className="text-sm font-medium text-stone-700 truncate">{task.title}</p>
+        <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+          {rawJson.modules.map((mod, modIdx) => (
+            <div key={modIdx} className="space-y-2">
+              <h4 className="text-xs font-bold text-stone-700 uppercase tracking-wider sticky top-0 bg-stone-50/95 py-1.5 z-10 backdrop-blur-sm">
+                {mod.title || `Module ${modIdx + 1}`}
+              </h4>
+              <div className="space-y-2 pl-2 border-l-2 border-stone-200">
+                {mod.tasks?.map((task, taskIdx) => (
+                  <div key={taskIdx} className="flex items-center justify-between gap-3 rounded-xl bg-white border border-stone-100 px-3 py-2.5 shadow-sm hover:border-violet-200 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-5 h-5 rounded-md bg-stone-100 text-stone-500 flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {taskIdx + 1}
+                      </span>
+                      <p className="text-sm font-medium text-stone-700 truncate">{task.title}</p>
+                    </div>
+                    <span className="badge bg-violet-50 text-violet-600 shrink-0 font-medium">{task.estimatedMinutes ? `${task.estimatedMinutes}m` : '25m'}</span>
+                  </div>
+                ))}
               </div>
-              <span className="badge bg-stone-100 text-stone-500 shrink-0">{task.estimatedMinutes ? `${task.estimatedMinutes} min` : '25 min'}</span>
             </div>
           ))}
         </div>
@@ -260,7 +420,7 @@ const ScheduleStep = ({ parsedMaterial }) => {
 
 const StepContent = ({ stepId, state }) => {
   if (stepId === 'goal') return <GoalStep goalForm={state.goalForm} setGoalForm={state.setGoalForm} />
-  if (stepId === 'slots') return <TimeSlotsStep timeSlotsForm={state.timeSlotsForm} setTimeSlotsForm={state.setTimeSlotsForm} />
+  if (stepId === 'slots') return <TimeSlotsStep timeSlotsForm={state.timeSlotsForm} setTimeSlotsForm={state.setTimeSlotsForm} goalForm={state.goalForm} />
   if (stepId === 'upload') return <UploadStep fileForm={state.fileForm} setFileForm={state.setFileForm} />
   if (stepId === 'polling') return <PollingStep parsedMaterial={state.parsedMaterial} errorMsg={state.errorMsg} />
   return <ScheduleStep parsedMaterial={state.parsedMaterial} />
@@ -329,11 +489,56 @@ const PlanningPage = () => {
         if (goalForm.deadline < goalForm.startDate) throw new Error("Deadline must be >= Start date");
         const res = await createGoal(goalForm);
         setCreatedGoal(res);
+        
+        if (timeSlotsForm.length === 1 && timeSlotsForm[0].dayOfWeek === 1 && timeSlotsForm[0].startTime === '08:00' && timeSlotsForm[0].endTime === '09:00') {
+          const suggestedDay = getSuggestedDayOfWeekForGoal(goalForm.startDate, goalForm.deadline)
+          let defaultStart = '08:00'
+          let defaultEnd = '09:00'
+          
+          const today = formatLocalDate()
+          const todayDayOfWeek = getDayOfWeekForDate(today)
+          const effectiveStart = goalForm.startDate < today ? today : goalForm.startDate
+          
+          if (suggestedDay === todayDayOfWeek && effectiveStart === today) {
+            const nextSlot = getNextHourSlot()
+            defaultStart = nextSlot.startTime
+            defaultEnd = nextSlot.endTime
+          }
+
+          setTimeSlotsForm([{ dayOfWeek: suggestedDay, startTime: defaultStart, endTime: defaultEnd }])
+        }
       } else if (currentStep === 1) {
         if (timeSlotsForm.length === 0) throw new Error("At least 1 time slot required");
+
         for (const slot of timeSlotsForm) {
           if (!slot.startTime || !slot.endTime || slot.startTime >= slot.endTime) {
             throw new Error("Invalid time slot: Start time must be before end time");
+          }
+
+          const matchingDates = getMatchingDatesForSlot(
+            goalForm.startDate,
+            goalForm.deadline,
+            slot.dayOfWeek
+          )
+
+          if (matchingDates.length === 0) {
+            throw new Error(
+              `${DAY_LABELS[slot.dayOfWeek]} is outside your goal date range. Choose a day between the start date and deadline.`
+            )
+          }
+
+          if (!hasFutureOccurrenceForSlot(matchingDates, slot.startTime)) {
+            const today = formatLocalDate()
+            const startMinutes = timeToMinutes(slot.startTime)
+            const currentMinutes = getCurrentMinutes()
+            
+            if (matchingDates.includes(today) && startMinutes <= currentMinutes) {
+              throw new Error("This time window already started. Choose a start time later than now.")
+            }
+
+            throw new Error(
+              "Selected time slot is in the past. Choose a future time window within your goal dates."
+            )
           }
         }
         await Promise.all(timeSlotsForm.map(ts => createTimeSlot(ts)));
@@ -354,16 +559,32 @@ const PlanningPage = () => {
           navigate('/dashboard');
         } catch (err) {
           const errMsg = err?.message || err?.data?.message || "";
+          const normalizedErr = errMsg.toLowerCase();
 
-          if (err?.status === 409 || errMsg.includes('already generated')) {
+          if (err?.status === 409 || normalizedErr.includes('already generated')) {
             throw new Error("Schedule was already generated for this goal.");
           }
 
-          if (err?.status === 400 || errMsg.toLowerCase().includes('parsed') || errMsg.toLowerCase().includes('invalid')) {
+          if (
+            normalizedErr.includes('parsed') ||
+            normalizedErr.includes('rawjson') ||
+            normalizedErr.includes('raw json') ||
+            normalizedErr.includes('material') ||
+            normalizedErr.includes('document')
+          ) {
             throw new Error("We could not parse this document properly. Try a clearer text-based PDF.");
           }
 
-          throw new Error(errMsg || "Failed to generate schedule");
+          if (
+            normalizedErr.includes('time slot') ||
+            normalizedErr.includes('availability') ||
+            normalizedErr.includes('schedule') ||
+            normalizedErr.includes('available')
+          ) {
+            throw new Error("Could not generate schedule with the selected time slots. Try adding future availability.");
+          }
+
+          throw new Error(errMsg || "Failed to generate schedule.");
         }
         return;
       }
@@ -475,8 +696,23 @@ const PlanningPage = () => {
               {currentStep === 0 ? 'Cancel' : 'Previous step'}
             </button>
             <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial) || (currentStep === 4 && !hasValidParsedTasks(parsedMaterial?.rawJson))}>
-              {isLoading && currentStep === STEPS.length - 1 ? 'Generating schedule...' : isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Generate schedule & go to dashboard' : 'Continue'}
-              {!isLoading && <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />}
+              {isLoading && currentStep === STEPS.length - 1 ? (
+                <>
+                  <StudyIcon name="timer" size={14} className="animate-spin" /> Generating schedule...
+                </>
+              ) : isLoading ? (
+                <>
+                  <StudyIcon name="timer" size={14} className="animate-spin" /> Loading...
+                </>
+              ) : currentStep === STEPS.length - 1 ? (
+                <>
+                  Generate schedule & go to dashboard <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />
+                </>
+              ) : (
+                <>
+                  Continue <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />
+                </>
+              )}
             </button>
           </div>
         </section>

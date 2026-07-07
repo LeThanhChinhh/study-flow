@@ -55,11 +55,13 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
         variants={panelVariants}
         className="card p-6 flex flex-col gap-5 items-center text-center relative overflow-hidden"
       >
-        <StudyIcon name="alert-circle" size={32} className="text-rose-400 mb-2"/>
+        <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mb-2">
+          <StudyIcon name="alert-circle" size={24} className="text-rose-400"/>
+        </div>
         <h2 className="text-sm font-bold text-stone-800">Failed to load task</h2>
         <p className="text-xs text-stone-500">{taskError}</p>
         <Link to="/dashboard" className={DASHBOARD_CTA_CLASS}>
-          Go to Dashboard
+          Back to dashboard
         </Link>
       </motion.section>
     )
@@ -72,12 +74,30 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
         className="card p-6 flex flex-col gap-5 items-center text-center relative overflow-hidden"
       >
         <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-2">
-          <StudyIcon name="map" size={24} className="text-stone-400"/>
+          <StudyIcon name="target" size={24} className="text-stone-400"/>
         </div>
-        <h2 className="text-sm font-bold text-stone-800">No task selected</h2>
-        <p className="text-xs text-stone-500">Choose a task from Dashboard to start a guided focus session.</p>
+        <h2 className="text-sm font-bold text-stone-800">No focus task selected</h2>
+        <p className="text-xs text-stone-500">Choose a task from your dashboard to start a session.</p>
         <Link to="/dashboard" className={DASHBOARD_CTA_CLASS}>
-          Go to Dashboard
+          Back to dashboard
+        </Link>
+      </motion.section>
+    )
+  }
+
+  if (currentTask.status === 'COMPLETED' || currentTask.status === 'done') {
+    return (
+      <motion.section
+        variants={panelVariants}
+        className="card p-6 flex flex-col gap-5 items-center text-center relative overflow-hidden"
+      >
+        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
+          <StudyIcon name="check-circle" size={24} className="text-emerald-500"/>
+        </div>
+        <h2 className="text-sm font-bold text-stone-800">Task Completed</h2>
+        <p className="text-xs text-stone-500">This task is already completed.</p>
+        <Link to="/dashboard" className={DASHBOARD_CTA_CLASS}>
+          Back to dashboard
         </Link>
       </motion.section>
     )
@@ -128,6 +148,18 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
           <StudyIcon name="timer" size={11} className="text-rose-400"/>
           {estimatedMins} min
         </span>
+        {currentTask.scheduledDate && (
+          <span className="badge bg-stone-100 text-stone-500">
+            <StudyIcon name="calendar" size={11} className="text-stone-400" />
+            {currentTask.scheduledDate} {currentTask.startTime ? `· ${currentTask.startTime}` : ''}
+          </span>
+        )}
+        {currentTask.status === 'IN_PROGRESS' && (
+          <span className="badge bg-violet-100 text-violet-600 shrink-0">In progress</span>
+        )}
+        {(currentTask.status === 'PENDING' || !currentTask.status) && (
+          <span className="badge bg-stone-100 text-stone-400 shrink-0">Pending</span>
+        )}
       </div>
 
       {/* Session intentions */}

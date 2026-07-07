@@ -49,6 +49,7 @@ const DashboardPage = () => {
   const [allTasks, setAllTasks] = useState([])
   const [isTasksLoading, setIsTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const fetchTodayTasks = async () => {
@@ -70,9 +71,8 @@ const DashboardPage = () => {
             scheduledDate: t.scheduledDate || today
           }
         })
-        
         const todayTasks = mappedTasks.filter(t => t.scheduledDate === today)
-        const futureTasks = mappedTasks.filter(t => t.scheduledDate > today)
+        const futureTasks = mappedTasks.filter(t => t.scheduledDate > today && t.status !== 'done')
 
         todayTasks.sort((a, b) => {
           if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex
@@ -109,27 +109,32 @@ const DashboardPage = () => {
     } else {
       setIsTasksLoading(false)
     }
-  }, [user])
+  }, [user, retryCount])
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  const handleRetry = () => {
+    setRetryCount(c => c + 1)
+  }
+
   const remainingTasksCount = tasks.filter(t => t.status !== 'done').length
+  const hasIncompleteTasks = allTasks.some(t => t.status !== 'done')
   const nextFocusTask =
-  tasks.find(t => t.status === 'active') ||
-  tasks.find(t => t.status === 'pending') ||
-  upcomingTasks.find(t => t.status === 'active') ||
-  upcomingTasks.find(t => t.status === 'pending')
+    tasks.find(t => t.status === 'active') ||
+    tasks.find(t => t.status === 'pending') ||
+    upcomingTasks.find(t => t.status === 'active') ||
+    upcomingTasks.find(t => t.status === 'pending')
 
   const handleStartFocus = () => {
     if (nextFocusTask?.id) {
-    navigate(`/focus?taskId=${nextFocusTask.id}`)
-    return
-  }
+      navigate(`/focus?taskId=${nextFocusTask.id}`)
+      return
+    }
 
-  navigate('/planning')
+    navigate('/planning')
   }
 
   const handleOpenPlanning = () => {
@@ -149,6 +154,7 @@ const DashboardPage = () => {
           onCreateGoal={handleOpenPlanning}
           remainingTasks={remainingTasksCount}
           hasActiveTask={!!nextFocusTask}
+          isLoading={isTasksLoading}
         />
 
         <div
@@ -160,8 +166,12 @@ const DashboardPage = () => {
               tasks={tasks} 
               upcomingTasks={upcomingTasks} 
               isLoading={isTasksLoading} 
-              error={tasksError} 
+              error={tasksError}
+              hasAnyTasks={allTasks.length > 0}
+              hasIncompleteTasks={hasIncompleteTasks}
               onTaskClick={(taskId) => navigate(`/focus?taskId=${taskId}`)}
+              onRetry={handleRetry}
+              onCreatePlan={handleOpenPlanning}
             />
           </div>
           <div className="lg:col-span-2"><FocusSessionCard onStartFocus={handleStartFocus} onCreateGoal={handleOpenPlanning} activeTask={nextFocusTask} /></div>
@@ -172,7 +182,7 @@ const DashboardPage = () => {
           style={{ animationDelay: '0.18s' }}
         >
           <div className="lg:col-span-2"><StudyStreakCard user={user} /></div>
-          <div className="lg:col-span-3"><LearningProgressCard user={user} tasks={allTasks} onCreateGoal={handleOpenPlanning} /></div>
+          <div className="lg:col-span-3"><LearningProgressCard user={user} tasks={allTasks} todayTasks={tasks} onCreateGoal={handleOpenPlanning} /></div>
         </div>
 
         <QuickActionsBar

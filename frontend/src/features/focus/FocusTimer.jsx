@@ -31,7 +31,7 @@ const STATUS_RING_COLOR = {
 }
 
 // FocusTimer owns the countdown state and exposes control handlers
-const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete, disabled }) => {
+const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete, disabled, isCompletingSession }) => {
   const progress = secondsLeft / POMODORO_SECONDS
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress)
   const isFocusing = status === 'focusing'
@@ -55,7 +55,9 @@ const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, 
   }, [isComplete, onComplete])
 
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="card p-8 flex flex-col items-center gap-8 relative overflow-hidden w-full max-w-sm mx-auto">
+      {/* Subtle top highlight */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/50 to-transparent"/>
 
       {/* Ring + time display */}
       <div
@@ -242,10 +244,11 @@ const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, 
         {!isReady && (
           <motion.button
             id="focus-timer-reset"
-            onClick={onReset}
-            whileTap={{ scale: 0.95 }}
+            onClick={disabled ? undefined : onReset}
+            disabled={disabled}
+            whileTap={!disabled ? { scale: 0.95 } : {}}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className="flex items-center gap-2 px-4 py-3 bg-white/80 hover:bg-stone-50 text-stone-500 hover:text-stone-700 font-medium text-sm rounded-2xl border border-stone-200 hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:ring-offset-2 transition-colors duration-150"
+            className={`flex items-center gap-2 px-4 py-3 bg-white/80 ${disabled ? 'text-stone-400 cursor-not-allowed opacity-70' : 'hover:bg-stone-50 text-stone-500 hover:text-stone-700'} font-medium text-sm rounded-2xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-200 focus:ring-offset-2 transition-colors duration-150`}
             aria-label="Reset timer to 25 minutes"
           >
             <StudyIcon name="clock" size={14}/>

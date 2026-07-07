@@ -55,7 +55,7 @@ export const AppNav = ({ user, onLogout }) => (
 )
 
 /* Hero greeting section */
-export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTasks = 0, hasActiveTask = true }) => {
+export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTasks = 0, hasActiveTask = true, isLoading = false }) => {
   const { word, icon } = getGreeting()
   return (
     <header className="mb-8 animate-slide-up">
@@ -73,11 +73,20 @@ export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTas
 
       {/* Sub-line with remaining tasks */}
       <p className="text-stone-500 text-sm mb-6 max-w-md leading-relaxed">
-        You have{' '}
-        <span className="font-semibold text-stone-700">
-          {remainingTasks} {remainingTasks === 1 ? 'task' : 'tasks'}
-        </span>{' '}
-        remaining today. Keep the momentum going.
+        {isLoading ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-3 w-16 rounded bg-stone-200 animate-pulse align-middle" />
+            {' '}remaining today. Keep the momentum going.
+          </span>
+        ) : (
+          <>
+            You have{' '}
+            <span className="font-semibold text-stone-700">
+              {remainingTasks} {remainingTasks === 1 ? 'task' : 'tasks'}
+            </span>{' '}
+            remaining today. Keep the momentum going.
+          </>
+        )}
       </p>
 
       {/* Hero CTAs */}
@@ -107,11 +116,16 @@ export const TaskDot = ({ status }) => {
       <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse-soft" />
     </div>
   )
-  return <div className="w-5 h-5 rounded-full border-2 border-stone-200 shrink-0 mt-0.5" />
+  // pending — subtle filled center dot
+  return (
+    <div className="w-5 h-5 rounded-full border-2 border-stone-200 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />
+    </div>
+  )
 }
 
 /* Today's Flow card */
-export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null, onTaskClick }) => {
+export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = false, error = null, hasAnyTasks = false, hasIncompleteTasks = false, onTaskClick, onRetry, onCreatePlan }) => {
   const doneCount = tasks.filter(t => t.status === 'done').length
   const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
@@ -132,43 +146,83 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
             <p className="text-xs text-stone-400 mt-0.5">{TODAY_STR}</p>
           </div>
         </div>
-        <span className="badge bg-stone-100 text-stone-500 shrink-0">
-          {doneCount} / {tasks.length} done
-        </span>
+        {!isLoading && !error && tasks.length > 0 && (
+          <span className="badge bg-stone-100 text-stone-500 shrink-0">
+            {doneCount} / {tasks.length} done
+          </span>
+        )}
+        {isLoading && (
+          <div className="h-5 w-16 rounded-full bg-stone-100 animate-pulse" />
+        )}
       </div>
 
       {/* States */}
-      <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col">
+
+        {/* Loading skeleton */}
         {isLoading && (
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 my-auto">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex gap-3">
                 <div className="w-5 h-5 rounded-full bg-stone-100 shrink-0 mt-0.5 animate-pulse" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-stone-100 rounded w-3/4 animate-pulse" />
-                  <div className="h-3 bg-stone-50 rounded w-1/2 animate-pulse" />
+                  <div className="h-4 bg-stone-100 rounded w-3/4 animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+                  <div className="h-3 bg-stone-50 rounded w-1/2 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
                 </div>
               </div>
             ))}
           </div>
         )}
 
+        {/* Error state */}
         {!isLoading && error && (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <StudyIcon name="alert-circle" size={24} className="text-stone-300 mb-2" />
-            <p className="text-sm text-stone-500">{error}</p>
+          <div className="flex flex-col items-center justify-center py-6 text-center gap-3 my-auto">
+            <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
+              <StudyIcon name="alert-circle" size={20} className="text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-stone-700 mb-0.5">Couldn't load tasks</p>
+              <p className="text-xs text-stone-400">Check your connection and try again.</p>
+            </div>
+            {onRetry && (
+              <button
+                id="today-flow-retry-btn"
+                onClick={onRetry}
+                className="btn-ghost text-xs px-3 py-1.5"
+              >
+                <StudyIcon name="arrow-right" size={12} className="rotate-180" />
+                Retry
+              </button>
+            )}
           </div>
         )}
 
-        {!isLoading && !error && tasks.length === 0 && upcomingTasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <StudyIcon name="check-circle" size={24} className="text-stone-300 mb-2" />
-            <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
+        {/* Global empty state — no tasks ever created */}
+        {!isLoading && !error && !hasAnyTasks && (
+          <div className="flex flex-col items-center justify-center py-8 text-center gap-3 my-auto">
+            <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center">
+              <StudyIcon name="book-open" size={22} className="text-violet-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-stone-700 mb-1">No learning tasks yet.</p>
+              <p className="text-xs text-stone-400 max-w-[200px]">Create a learning plan to get started.</p>
+            </div>
+            {onCreatePlan && (
+              <button
+                id="today-flow-create-plan-btn"
+                onClick={onCreatePlan}
+                className="btn-accent text-xs px-4 py-2"
+              >
+                <StudyIcon name="plus" size={12} strokeWidth={2.5} />
+                Create a learning plan
+              </button>
+            )}
           </div>
         )}
 
-        {!isLoading && !error && tasks.length === 0 && upcomingTasks.length > 0 && (
-          <div className="flex flex-col w-full">
+        {/* Today empty, but has upcoming */}
+        {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length > 0 && (
+          <div className="flex flex-col w-full my-auto">
             <div className="flex flex-col items-center justify-center py-4 text-center mb-2">
               <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
               <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
@@ -177,32 +231,72 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
             <div className="bg-stone-50/50 rounded-xl p-4 border border-stone-100">
               <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Upcoming tasks</h3>
               <ul className="space-y-3">
-                {upcomingTasks.map(task => (
-                  <li 
-                    key={task.id} 
-                    className="flex flex-col gap-1 cursor-pointer hover:bg-stone-100/70 p-2 -mx-2 rounded-xl transition-colors"
-                    onClick={() => onTaskClick?.(task.id)}
-                  >
-                    <p className="text-sm font-medium text-stone-700 leading-snug">{task.title}</p>
-                    <p className="text-xs text-stone-400">
-                      {task.scheduledDate} {task.startTime ? `· ${task.startTime}` : ''}
-                    </p>
-                  </li>
-                ))}
+                {upcomingTasks.map(task => {
+                  const isDone = task.status === 'done'
+
+                  return (
+                    <li 
+                      key={task.id} 
+                      className={`flex flex-col gap-1 p-2 -mx-2 rounded-xl transition-colors ${
+                        isDone
+                          ? 'opacity-60 cursor-default'
+                          : 'cursor-pointer hover:bg-stone-100/70'
+                      }`}
+                      onClick={() => !isDone && onTaskClick?.(task.id)}
+                      aria-disabled={isDone}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-sm font-medium leading-snug ${isDone ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+                          {task.title}
+                        </p>
+                        {isDone && (
+                          <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-400">
+                        {task.scheduledDate} {task.startTime ? `· ${task.startTime}` : ''}
+                      </p>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           </div>
         )}
 
+        {/* Today empty, no upcoming either (but tasks exist on other days) */}
+        {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-6 text-center my-auto">
+            {hasIncompleteTasks ? (
+              <>
+                <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
+                <p className="text-sm font-semibold text-stone-700 mb-1">No tasks scheduled for today.</p>
+                <p className="text-xs text-stone-400">You still have unfinished tasks. Review your schedule or create a new plan.</p>
+              </>
+            ) : (
+              <>
+                <StudyIcon name="check-circle" size={24} className="text-emerald-400 mb-2" />
+                <p className="text-sm font-semibold text-stone-700 mb-1">All caught up!</p>
+                <p className="text-xs text-stone-400">No tasks scheduled for today.</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Task list */}
         {!isLoading && !error && tasks.length > 0 && (
           <ul className="space-y-0" role="list">
             {tasks.map((task, idx) => {
               const isLast = idx === tasks.length - 1
+              const isDone = task.status === 'done'
               return (
                 <li 
                   key={task.id} 
-                  className="flex gap-3 group cursor-pointer" 
-                  onClick={() => onTaskClick?.(task.id)}
+                  className={`flex gap-3 group ${
+                    isDone ? 'cursor-default opacity-70' : 'cursor-pointer'
+                  }`}
+                  onClick={() => !isDone && onTaskClick?.(task.id)}
+                  aria-disabled={isDone}
                 >
                   {/* Connector */}
                   <div className="flex flex-col items-center">
@@ -213,25 +307,36 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                   {/* Row content */}
                   <div className={`task-row flex-1 ${isLast ? 'pb-0' : 'pb-3'}`}>
                     <div
-                      className={`task-row-inner group-hover:bg-stone-50/80 transition-colors rounded-xl px-3 py-2 -mx-3 -my-2 ${task.status === 'active' ? ' is-active' : ''}`}
+                      className={`task-row-inner flex-1 transition-colors rounded-xl px-3 py-2 -mx-3 -my-2 ${
+                        task.status === 'active' ? 'is-active' :
+                        isDone ? '' :
+                        'group-hover:bg-stone-50/80'
+                      }`}
                     >
                       <div className="min-w-0">
                         <p className={`text-sm leading-snug ${
-                          task.status === 'done'   ? 'line-through text-stone-400' :
+                          isDone             ? 'line-through text-stone-400' :
                           task.status === 'active' ? 'text-violet-700 font-semibold' :
                           'text-stone-700 font-medium'
                         }`}>
                           {task.title}
                         </p>
                         <p className="text-xs text-stone-400 mt-0.5">
-                          {task.module} · {task.mins} min
+                          {task.module}
+                          {task.mins ? ` · ${task.mins} min` : ''}
+                          {task.startTime ? ` · ${task.startTime}` : ''}
                         </p>
                       </div>
+
+                      {/* Status badges */}
                       {task.status === 'active' && (
                         <span className="badge bg-violet-100 text-violet-600 shrink-0">In progress</span>
                       )}
-                      {task.status === 'done' && (
+                      {isDone && (
                         <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
+                      )}
+                      {task.status === 'pending' && (
+                        <span className="badge bg-stone-100 text-stone-400 shrink-0">Pending</span>
                       )}
                     </div>
                   </div>
@@ -242,16 +347,18 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
         )}
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-auto pt-5">
-        <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill transition-all duration-500"
-            style={{ width: `${pct}%` }}
-          />
+      {/* Progress bar — only when tasks exist */}
+      {!isLoading && !error && tasks.length > 0 && (
+        <div className="mt-auto pt-5">
+          <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs text-stone-400 mt-1.5">{pct}% of today's plan complete</p>
         </div>
-        <p className="text-xs text-stone-400 mt-1.5">{pct}% of today's plan complete</p>
-      </div>
+      )}
     </section>
   )
 }
@@ -332,7 +439,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
           <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
           <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
         </div>
-        <button id="focus-start-btn" className="btn-accent w-full justify-center" onClick={onStartFocus}>
+        <button id="focus-start-btn" className="btn-accent w-full flex items-center justify-center gap-2" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
           Start session
         </button>
@@ -343,7 +450,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
           <p className="label-overline mb-1">No focus task yet</p>
           <p className="text-sm font-medium text-stone-700 leading-snug">Create a learning plan to start your first focus session.</p>
         </div>
-        <button id="focus-start-btn" className="btn-primary w-full justify-center" onClick={onCreateGoal}>
+        <button id="focus-start-btn" className="btn-primary w-full flex items-center justify-center gap-2" onClick={onCreateGoal}>
           <StudyIcon name="plus" size={14} strokeWidth={2.5} />
           Create learning plan
         </button>
@@ -392,10 +499,13 @@ export const StudyStreakCard = ({ user }) => {
 }
 
 /* Learning Progress card */
-export const LearningProgressCard = ({ user, tasks = [], onCreateGoal }) => {
+export const LearningProgressCard = ({ user, tasks = [], todayTasks = [], onCreateGoal }) => {
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+  const todayTotal = todayTasks.length
+  const todayDone = todayTasks.filter(t => t.status === 'done').length
+  const todayRemaining = todayTotal - todayDone
 
   return (
     <section aria-label="Learning progress" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full">
@@ -412,13 +522,18 @@ export const LearningProgressCard = ({ user, tasks = [], onCreateGoal }) => {
       <div className="flex-1 flex flex-col justify-center">
         {totalTasks === 0 ? (
           <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
-             <p className="text-sm text-stone-500">No learning tasks yet.</p>
-             <button onClick={onCreateGoal} className="btn-ghost text-xs px-3 py-1.5">
-               Create a learning plan
-             </button>
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
+              <StudyIcon name="bar-chart" size={18} className="text-emerald-400" />
+            </div>
+            <p className="text-sm text-stone-500">No learning tasks yet.</p>
+            <button onClick={onCreateGoal} className="btn-ghost text-xs px-3 py-1.5">
+              <StudyIcon name="plus" size={12} />
+              Create a learning plan
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Overall progress */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-stone-700">All Tasks</span>
@@ -438,6 +553,27 @@ export const LearningProgressCard = ({ user, tasks = [], onCreateGoal }) => {
               </div>
               <p className="text-xs text-stone-500 mt-2">{progressPercent}% complete</p>
             </div>
+
+            {/* Today stats */}
+            {todayTotal > 0 && (
+              <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <StudyIcon name="calendar" size={12} className="text-stone-400" />
+                  <span className="text-xs text-stone-500">Today</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="badge bg-emerald-100 text-emerald-600">
+                    <StudyIcon name="check" size={10} strokeWidth={2.5} />
+                    {todayDone} done
+                  </span>
+                  {todayRemaining > 0 && (
+                    <span className="badge bg-stone-100 text-stone-500">
+                      {todayRemaining} left
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
