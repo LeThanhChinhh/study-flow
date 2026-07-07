@@ -187,15 +187,15 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
   <div className="space-y-4">
     <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-5">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center">
-          <StudyIcon name={parsedMaterial ? "check" : "timer"} size={18} />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${errorMsg ? 'bg-red-100 text-red-600' : 'bg-violet-100 text-violet-600'}`}>
+          <StudyIcon name={parsedMaterial ? "check" : errorMsg ? "alert-triangle" : "timer"} size={18} />
         </div>
         <div>
           <h3 className="text-sm font-semibold text-stone-800">
             {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'AI parsing status'}
           </h3>
           <p className="text-xs text-stone-400 mt-0.5">
-            {parsedMaterial ? 'Material parsed successfully.' : errorMsg ? 'Parsing stopped. Please go back and try again.' : 'Polling every 3 seconds...'}
+            {parsedMaterial ? 'Material parsed successfully.' : errorMsg ? 'Parsing stopped. We could not parse this document.' : 'Polling every 3 seconds...'}
           </p>
         </div>
       </div>
@@ -219,9 +219,9 @@ const ScheduleStep = ({ parsedMaterial }) => {
     return (
       <div className="space-y-4 text-center py-6">
         <StudyIcon name="alert-triangle" size={32} className="text-amber-500 mx-auto mb-2" />
-        <h3 className="text-sm font-semibold text-stone-800">No tasks generated</h3>
+        <h3 className="text-sm font-semibold text-stone-800">We could not find any study tasks in this document.</h3>
         <p className="text-xs text-stone-500 max-w-sm mx-auto">
-          Parsed material has no tasks to schedule. Please try uploading a different document.
+          Try a clearer text-based PDF.
         </p>
       </div>
     )
@@ -303,7 +303,7 @@ const PlanningPage = () => {
             setParsedMaterial(res);
             clearInterval(interval);
           } else if (res.status === 'FAILED') {
-            setErrorMsg('AI parsing failed. Please try again.');
+            setErrorMsg('We could not parse this document. Try a clearer text-based PDF.');
             clearInterval(interval);
           }
         } catch (err) {
@@ -348,7 +348,7 @@ const PlanningPage = () => {
         }
       } else if (currentStep === 4) {
         if (!createdGoal?.id || !parsedMaterial?.id) throw new Error("Missing data to generate schedule");
-        if (!hasValidParsedTasks(parsedMaterial?.rawJson)) throw new Error("Parsed material has no tasks to schedule");
+        if (!hasValidParsedTasks(parsedMaterial?.rawJson)) throw new Error("We could not find any study tasks in this document. Try a clearer text-based PDF.");
         try {
           await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
           navigate('/dashboard');
@@ -357,6 +357,10 @@ const PlanningPage = () => {
 
           if (err?.status === 409 || errMsg.includes('already generated')) {
             throw new Error("Schedule was already generated for this goal.");
+          }
+
+          if (err?.status === 400 || errMsg.toLowerCase().includes('parsed') || errMsg.toLowerCase().includes('invalid')) {
+            throw new Error("We could not parse this document properly. Try a clearer text-based PDF.");
           }
 
           throw new Error(errMsg || "Failed to generate schedule");
@@ -470,7 +474,7 @@ const PlanningPage = () => {
             <button type="button" className="btn-ghost w-full sm:w-auto justify-center" onClick={goBack} disabled={isLoading}>
               {currentStep === 0 ? 'Cancel' : 'Previous step'}
             </button>
-            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial && !errorMsg) || (currentStep === 4 && !hasValidParsedTasks(parsedMaterial?.rawJson))}>
+            <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial) || (currentStep === 4 && !hasValidParsedTasks(parsedMaterial?.rawJson))}>
               {isLoading && currentStep === STEPS.length - 1 ? 'Generating schedule...' : isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Generate schedule & go to dashboard' : 'Continue'}
               {!isLoading && <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />}
             </button>
