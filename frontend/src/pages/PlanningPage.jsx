@@ -67,31 +67,31 @@ const Stepper = ({ currentStep }) => (
         return (
           <div
             key={step.id}
-            className={`rounded-2xl border px-3 py-3 transition-all duration-200 ${
+            className={`rounded-2xl border px-3 py-3 transition-all duration-300 ${
               isActive
-                ? 'bg-violet-50 border-violet-200 shadow-sm'
+                ? 'bg-violet-50 border-violet-200 shadow-sm scale-[1.02]'
                 : isDone
                   ? 'bg-emerald-50 border-emerald-100'
-                  : 'bg-white/70 border-stone-100'
+                  : 'bg-white/70 border-stone-100 opacity-60'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div
-                className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   isActive
-                    ? 'bg-violet-600 text-white'
+                    ? 'bg-violet-600 text-white shadow-sm'
                     : isDone
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-emerald-500 text-white shadow-sm'
                       : 'bg-stone-100 text-stone-400'
                 }`}
               >
                 <StudyIcon name={isDone ? 'check' : step.icon} size={13} strokeWidth={2.2} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-stone-400">
+                <p className="text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-0.5">
                   {step.eyebrow}
                 </p>
-                <p className={`text-xs font-semibold truncate ${isActive ? 'text-violet-700' : 'text-stone-700'}`}>
+                <p className={`text-xs font-bold truncate ${isActive ? 'text-violet-700' : 'text-stone-700'}`}>
                   {step.title}
                 </p>
               </div>
@@ -104,17 +104,18 @@ const Stepper = ({ currentStep }) => (
 )
 
 const GoalStep = ({ goalForm, setGoalForm }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
     <label className="block md:col-span-2">
-      <span className="label-overline block mb-2">Goal title</span>
-      <input className="input-field" placeholder="Ví dụ: Ôn tập Công nghệ phần mềm" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
+      <span className="label-overline block mb-1.5">Goal title</span>
+      <input className="input-field" placeholder="e.g., Learn React Basics" value={goalForm.title} onChange={e => setGoalForm({...goalForm, title: e.target.value})} />
+      <p className="text-[11px] text-stone-400 mt-1.5 font-medium">A clear goal helps AI organize your learning path.</p>
     </label>
     <label className="block">
-      <span className="label-overline block mb-2">Start date</span>
+      <span className="label-overline block mb-1.5">Start date</span>
       <input className="input-field" type="date" value={goalForm.startDate} onChange={e => setGoalForm({...goalForm, startDate: e.target.value})} />
     </label>
     <label className="block">
-      <span className="label-overline block mb-2">Deadline</span>
+      <span className="label-overline block mb-1.5">Deadline</span>
       <input className="input-field" type="date" value={goalForm.deadline} onChange={e => setGoalForm({...goalForm, deadline: e.target.value})} />
     </label>
   </div>
@@ -136,11 +137,12 @@ const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-stone-500 mb-4">Add the time windows you usually use for studying. AI will schedule tasks within these slots.</p>
       {timeSlotsForm.map((slot, i) => (
-        <div key={i} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <label className="block">
-            <span className="label-overline block mb-2">Day</span>
-            <select className="input-field" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
+        <div key={i} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-4 rounded-2xl bg-stone-50/50 border border-stone-100 relative">
+          <label className="block flex-1 min-w-[120px]">
+            <span className="label-overline block mb-1.5">Day</span>
+            <select className="input-field py-2.5" value={slot.dayOfWeek} onChange={e => updateSlot(i, 'dayOfWeek', e.target.value)}>
               <option value="1">Monday</option>
               <option value="2">Tuesday</option>
               <option value="3">Wednesday</option>
@@ -150,34 +152,43 @@ const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm }) => {
               <option value="7">Sunday</option>
             </select>
           </label>
-          <label className="block">
-            <span className="label-overline block mb-2">Start</span>
-            <input className="input-field" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
+          <label className="block w-28">
+            <span className="label-overline block mb-1.5">Start</span>
+            <input className="input-field py-2.5" type="time" value={slot.startTime} onChange={e => updateSlot(i, 'startTime', e.target.value)} />
           </label>
-          <label className="block">
-            <span className="label-overline block mb-2">End</span>
-            <input className="input-field" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
+          <label className="block w-28">
+            <span className="label-overline block mb-1.5">End</span>
+            <input className="input-field py-2.5" type="time" value={slot.endTime} onChange={e => updateSlot(i, 'endTime', e.target.value)} />
           </label>
-          <button type="button" className="btn-ghost mb-1" onClick={() => removeSlot(i)}>Remove</button>
+          <button type="button" className="w-[42px] h-[42px] rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0" onClick={() => removeSlot(i)} aria-label="Remove slot">
+            <StudyIcon name="x" size={16} />
+          </button>
         </div>
       ))}
-      <button type="button" className="btn-ghost" onClick={addSlot}>+ Add Time Slot</button>
+      <button type="button" className="btn-ghost text-sm w-full border border-dashed border-stone-200 hover:border-stone-300 py-3 rounded-2xl mt-2" onClick={addSlot}>
+        <StudyIcon name="plus" size={14} /> Add Time Slot
+      </button>
     </div>
   )
 }
 
 const UploadStep = ({ fileForm, setFileForm }) => (
-  <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50/40 p-8 text-center">
-    <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-      <StudyIcon name="upload" size={22} className="text-violet-600" />
+  <div className="rounded-3xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-10 text-center hover:bg-violet-50/60 transition-colors">
+    <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-violet-100">
+      <StudyIcon name="upload" size={24} className="text-violet-600" />
     </div>
     <h3 className="text-base font-semibold text-stone-800">Drop your PDF here</h3>
-    <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-      {fileForm ? fileForm.name : 'Select a PDF file to upload'}
+    <p className="text-sm text-stone-500 mt-1 max-w-sm mx-auto leading-relaxed">
+      {fileForm ? (
+        <span className="font-medium text-violet-700 flex items-center justify-center gap-1.5 mt-2">
+          <StudyIcon name="file-text" size={14} />
+          {fileForm.name} {fileForm.size ? `(${(fileForm.size / 1024 / 1024).toFixed(2)} MB)` : ''}
+        </span>
+      ) : 'Upload your textbook, notes, or syllabus. We will extract the study tasks for you.'}
     </p>
-    <label className="btn-ghost mt-5 inline-flex cursor-pointer">
+    <label className="btn-primary mt-6 inline-flex cursor-pointer shadow-sm">
       <StudyIcon name="file-text" size={14} />
-      Choose PDF
+      {fileForm ? 'Choose a different file' : 'Browse files'}
       <input type="file" accept=".pdf" className="hidden" onChange={e => setFileForm(e.target.files[0])} />
     </label>
   </div>
@@ -185,17 +196,17 @@ const UploadStep = ({ fileForm, setFileForm }) => (
 
 const PollingStep = ({ parsedMaterial, errorMsg }) => (
   <div className="space-y-4">
-    <div className="rounded-2xl bg-stone-50/80 border border-stone-100 p-5">
+    <div className={`rounded-2xl border p-5 ${parsedMaterial ? 'bg-emerald-50/50 border-emerald-100' : errorMsg ? 'bg-red-50/50 border-red-100' : 'bg-stone-50/80 border-stone-100'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${errorMsg ? 'bg-red-100 text-red-600' : 'bg-violet-100 text-violet-600'}`}>
-          <StudyIcon name={parsedMaterial ? "check" : errorMsg ? "alert-triangle" : "timer"} size={18} />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${parsedMaterial ? 'bg-emerald-100 text-emerald-600' : errorMsg ? 'bg-red-100 text-red-600' : 'bg-white text-violet-600 border border-violet-100'}`}>
+          <StudyIcon name={parsedMaterial ? "check" : errorMsg ? "alert-circle" : "timer"} size={18} className={!parsedMaterial && !errorMsg ? 'animate-pulse' : ''} />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-stone-800">
-            {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'AI parsing status'}
+          <h3 className={`text-sm font-semibold ${parsedMaterial ? 'text-emerald-800' : errorMsg ? 'text-red-800' : 'text-stone-800'}`}>
+            {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'Analyzing your document...'}
           </h3>
-          <p className="text-xs text-stone-400 mt-0.5">
-            {parsedMaterial ? 'Material parsed successfully.' : errorMsg ? 'Parsing stopped. We could not parse this document.' : 'Polling every 3 seconds...'}
+          <p className={`text-xs mt-0.5 ${parsedMaterial ? 'text-emerald-600' : errorMsg ? 'text-red-600' : 'text-stone-500'}`}>
+            {parsedMaterial ? 'Material parsed successfully. Ready to generate schedule.' : errorMsg ? 'We could not parse this document. Try a clearer text-based PDF.' : 'Extracting study tasks. This may take a moment.'}
           </p>
         </div>
       </div>
@@ -205,8 +216,9 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
         </div>
       )}
     </div>
-    <p className="text-sm text-stone-500">
-      When status becomes <span className="font-semibold text-emerald-600">COMPLETED</span>, the UI will unlock schedule generation.
+    <p className="text-xs text-stone-400 flex items-center justify-center gap-1.5 mt-4">
+      <StudyIcon name="timer" size={12} className={!parsedMaterial && !errorMsg ? 'animate-spin' : 'hidden'} />
+      {parsedMaterial ? 'You can now proceed to the next step.' : errorMsg ? 'Please go back and try another file.' : 'Please wait...'}
     </p>
   </div>
 )
@@ -217,11 +229,13 @@ const ScheduleStep = ({ parsedMaterial }) => {
   
   if (!isValid) {
     return (
-      <div className="space-y-4 text-center py-6">
-        <StudyIcon name="alert-triangle" size={32} className="text-amber-500 mx-auto mb-2" />
-        <h3 className="text-sm font-semibold text-stone-800">We could not find any study tasks in this document.</h3>
-        <p className="text-xs text-stone-500 max-w-sm mx-auto">
-          Try a clearer text-based PDF.
+      <div className="space-y-4 text-center py-10 px-4 card bg-red-50/30 border-red-100">
+        <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+          <StudyIcon name="alert-circle" size={28} className="text-red-500" />
+        </div>
+        <h3 className="text-base font-semibold text-stone-800">No tasks found</h3>
+        <p className="text-sm text-stone-500 max-w-sm mx-auto">
+          We could not extract any study tasks from this document. Try uploading a clearer, text-based PDF.
         </p>
       </div>
     )
@@ -229,27 +243,56 @@ const ScheduleStep = ({ parsedMaterial }) => {
 
   const tasks = getAllParsedTasks(rawJson);
   const moduleCount = rawJson.modules.length;
+  const totalMins = tasks.reduce((sum, t) => sum + (t.estimatedMinutes || 25), 0);
+  const totalHoursLabel =
+    totalMins < 60
+      ? '<1'
+      : (totalMins / 60).toFixed(1).replace('.0', '');
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">{moduleCount}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Modules</span>
+        </div>
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">{tasks.length}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Tasks</span>
+        </div>
+        <div className="card p-3 flex flex-col items-center justify-center text-center bg-violet-50/50 border-violet-100 shadow-none">
+          <span className="text-2xl font-bold text-violet-700">~{totalHoursLabel}</span>
+          <span className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Hours est.</span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-stone-200 bg-stone-50/50 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <IconBadge name="layers" bg="bg-white" icon="text-violet-600" badgeSize="w-9 h-9" />
+          <IconBadge name="layers" bg="bg-white" icon="text-violet-600" badgeSize="w-9 h-9 shadow-sm" />
           <div>
-            <h3 className="text-sm font-semibold text-stone-800">{rawJson.modules[0]?.title || 'Overview'}</h3>
-            <p className="text-xs text-stone-400">{moduleCount} module{moduleCount > 1 ? 's' : ''} · {tasks.length} generated tasks</p>
+            <h3 className="text-sm font-semibold text-stone-800">Curriculum Preview</h3>
+            <p className="text-xs text-stone-500">Tasks will be scheduled based on your availability.</p>
           </div>
         </div>
-        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-          {tasks.map((task, index) => (
-            <div key={index} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 border border-white px-3 py-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-6 h-6 rounded-lg bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold shrink-0">
-                  {index + 1}
-                </span>
-                <p className="text-sm font-medium text-stone-700 truncate">{task.title}</p>
+        <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+          {rawJson.modules.map((mod, modIdx) => (
+            <div key={modIdx} className="space-y-2">
+              <h4 className="text-xs font-bold text-stone-700 uppercase tracking-wider sticky top-0 bg-stone-50/95 py-1.5 z-10 backdrop-blur-sm">
+                {mod.title || `Module ${modIdx + 1}`}
+              </h4>
+              <div className="space-y-2 pl-2 border-l-2 border-stone-200">
+                {mod.tasks?.map((task, taskIdx) => (
+                  <div key={taskIdx} className="flex items-center justify-between gap-3 rounded-xl bg-white border border-stone-100 px-3 py-2.5 shadow-sm hover:border-violet-200 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-5 h-5 rounded-md bg-stone-100 text-stone-500 flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {taskIdx + 1}
+                      </span>
+                      <p className="text-sm font-medium text-stone-700 truncate">{task.title}</p>
+                    </div>
+                    <span className="badge bg-violet-50 text-violet-600 shrink-0 font-medium">{task.estimatedMinutes ? `${task.estimatedMinutes}m` : '25m'}</span>
+                  </div>
+                ))}
               </div>
-              <span className="badge bg-stone-100 text-stone-500 shrink-0">{task.estimatedMinutes ? `${task.estimatedMinutes} min` : '25 min'}</span>
             </div>
           ))}
         </div>
@@ -475,8 +518,23 @@ const PlanningPage = () => {
               {currentStep === 0 ? 'Cancel' : 'Previous step'}
             </button>
             <button type="button" className="btn-accent w-full sm:w-auto justify-center" onClick={goNext} disabled={isLoading || (currentStep === 3 && !parsedMaterial) || (currentStep === 4 && !hasValidParsedTasks(parsedMaterial?.rawJson))}>
-              {isLoading && currentStep === STEPS.length - 1 ? 'Generating schedule...' : isLoading ? 'Loading...' : currentStep === STEPS.length - 1 ? 'Generate schedule & go to dashboard' : 'Continue'}
-              {!isLoading && <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />}
+              {isLoading && currentStep === STEPS.length - 1 ? (
+                <>
+                  <StudyIcon name="timer" size={14} className="animate-spin" /> Generating schedule...
+                </>
+              ) : isLoading ? (
+                <>
+                  <StudyIcon name="timer" size={14} className="animate-spin" /> Loading...
+                </>
+              ) : currentStep === STEPS.length - 1 ? (
+                <>
+                  Generate schedule & go to dashboard <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />
+                </>
+              ) : (
+                <>
+                  Continue <StudyIcon name="arrow-right" size={14} strokeWidth={2.5} />
+                </>
+              )}
             </button>
           </div>
         </section>
