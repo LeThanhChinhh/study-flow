@@ -3,8 +3,11 @@ package com.studyflow.core.services;
 import com.studyflow.core.dtos.materials.MaterialStatusResponse;
 import com.studyflow.core.dtos.materials.MaterialUploadResponse;
 import com.studyflow.core.entities.Material;
+import com.studyflow.core.exceptions.InvalidAiPlanningResultException;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.MaterialRepository;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningAiResult;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,15 +27,18 @@ public class MaterialService {
     private final MaterialRepository materialRepository;
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
+    private final PlanningAiResultNormalizer planningAiResultNormalizer;
 
     public MaterialService(
             MaterialRepository materialRepository,
             GoalService goalService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            PlanningAiResultNormalizer planningAiResultNormalizer
     ) {
         this.materialRepository = materialRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
+        this.planningAiResultNormalizer = planningAiResultNormalizer;
     }
 
     @Transactional
@@ -62,10 +68,15 @@ public class MaterialService {
 
         Material savedMaterial = materialRepository.saveAndFlush(material);
 
-        // MVP mock: giữ nguyên contract upload/polling nhưng hoàn tất AI parsing ngay trong local.
-        // Khi tích hợp S3/Gemini thật, phần này sẽ được thay bằng job bất đồng bộ.
-        savedMaterial.setRawJson(buildMockAiResult(fileName));
-        savedMaterial.setStatus("COMPLETED");
+        try {
+            Map<String, Object> rawMockResult = buildMockAiResult(fileName);
+            PlanningAiResult normalizedResult = planningAiResultNormalizer.normalize(rawMockResult);
+            savedMaterial.setRawJson(normalizedResult.normalizedRawJson());
+            savedMaterial.setStatus("COMPLETED");
+        } catch (InvalidAiPlanningResultException e) {
+            savedMaterial.setRawJson(null);
+            savedMaterial.setStatus("FAILED");
+        }
         materialRepository.saveAndFlush(savedMaterial);
 
         return new MaterialUploadResponse(

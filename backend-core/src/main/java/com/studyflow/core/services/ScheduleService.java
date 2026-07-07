@@ -14,24 +14,23 @@ import com.studyflow.core.repositories.LearningModuleRepository;
 import com.studyflow.core.repositories.MaterialRepository;
 import com.studyflow.core.repositories.TaskRepository;
 import com.studyflow.core.repositories.TimeSlotRepository;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningAiResult;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningModule;
+import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningTask;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class ScheduleService {
-
-    private static final int DEFAULT_ESTIMATED_MINUTES = 25;
-    private static final int MAX_TITLE_LENGTH = 255;
 
     private final MaterialRepository materialRepository;
     private final LearningModuleRepository learningModuleRepository;
@@ -39,6 +38,7 @@ public class ScheduleService {
     private final TimeSlotRepository timeSlotRepository;
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
+    private final PlanningAiResultNormalizer planningAiResultNormalizer;
 
     public ScheduleService(
             MaterialRepository materialRepository,
@@ -46,7 +46,8 @@ public class ScheduleService {
             TaskRepository taskRepository,
             TimeSlotRepository timeSlotRepository,
             GoalService goalService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            PlanningAiResultNormalizer planningAiResultNormalizer
     ) {
         this.materialRepository = materialRepository;
         this.learningModuleRepository = learningModuleRepository;
@@ -54,6 +55,7 @@ public class ScheduleService {
         this.timeSlotRepository = timeSlotRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
+        this.planningAiResultNormalizer = planningAiResultNormalizer;
     }
 
     @Transactional
@@ -71,30 +73,30 @@ public class ScheduleService {
             throw new ConflictException("Schedule has already been generated for this goal.");
         }
 
-        List<ParsedModule> parsedModules = parseAiModules(material.getRawJson());
+        PlanningAiResult planningResult = planningAiResultNormalizer.normalize(material.getRawJson());
+        List<PlanningModule> parsedModules = planningResult.modules();
+        
         List<TimeSlot> timeSlots = timeSlotRepository.findByUserIdOrderByDayOfWeekAscStartTimeAsc(userId);
         List<AvailabilityWindow> availabilityWindows = buildAvailabilityWindows(goal, timeSlots);
 
         int taskOrderIndex = 0;
         List<Task> generatedTasks = new ArrayList<>();
 
-        for (int moduleIndex = 0; moduleIndex < parsedModules.size(); moduleIndex++) {
-            ParsedModule parsedModule = parsedModules.get(moduleIndex);
-
+        for (PlanningModule parsedModule : parsedModules) {
             LearningModule module = new LearningModule();
             module.setGoalId(goal.getId());
-            module.setTitle(limitTitle(parsedModule.title(), "Module " + (moduleIndex + 1)));
-            module.setOrderIndex(parsedModule.orderIndex() != null ? parsedModule.orderIndex() : moduleIndex + 1);
+            module.setTitle(parsedModule.title());
+            module.setOrderIndex(parsedModule.orderIndex());
             LearningModule savedModule = learningModuleRepository.saveAndFlush(module);
 
-            for (ParsedTask parsedTask : parsedModule.tasks()) {
+            for (PlanningTask parsedTask : parsedModule.tasks()) {
                 ScheduledRange scheduledRange = allocateNextRange(availabilityWindows, parsedTask.estimatedMinutes());
 
                 Task task = new Task();
                 task.setUserId(userId);
                 task.setGoalId(goal.getId());
                 task.setModuleId(savedModule.getId());
-                task.setTitle(limitTitle(parsedTask.title(), "Generated task"));
+                task.setTitle(parsedTask.title());
                 task.setScheduledDate(scheduledRange.date());
                 task.setStartTime(scheduledRange.startTime());
                 task.setEndTime(scheduledRange.endTime());
@@ -147,55 +149,6 @@ public class ScheduleService {
         }
     }
 
-    private List<ParsedModule> parseAiModules(Map<String, Object> rawJson) {
-        Object modulesObject = rawJson.get("modules");
-        if (!(modulesObject instanceof List<?> moduleObjects) || moduleObjects.isEmpty()) {
-            throw new IllegalArgumentException("Parsed material contains no modules");
-        }
-
-        List<ParsedModule> parsedModules = new ArrayList<>();
-
-        for (int moduleIndex = 0; moduleIndex < moduleObjects.size(); moduleIndex++) {
-            Object moduleObject = moduleObjects.get(moduleIndex);
-            if (!(moduleObject instanceof Map<?, ?> moduleMap)) {
-                throw new IllegalArgumentException("Invalid module format in parsed material");
-            }
-
-            String moduleTitle = readString(moduleMap.get("title"), null);
-            if (!StringUtils.hasText(moduleTitle)) {
-                throw new IllegalArgumentException("Module title is required in parsed material");
-            }
-            Integer moduleOrderIndex = readInteger(moduleMap.get("orderIndex"), moduleIndex + 1);
-            Object tasksObject = moduleMap.get("tasks");
-
-            if (!(tasksObject instanceof List<?> taskObjects) || taskObjects.isEmpty()) {
-                throw new IllegalArgumentException("Module must contain at least one task");
-            }
-
-            List<ParsedTask> parsedTasks = new ArrayList<>();
-            for (Object taskObject : taskObjects) {
-                if (!(taskObject instanceof Map<?, ?> taskMap)) {
-                    throw new IllegalArgumentException("Invalid task format in parsed material");
-                }
-
-                String taskTitle = readString(taskMap.get("title"), null);
-                if (!StringUtils.hasText(taskTitle)) {
-                    throw new IllegalArgumentException("Task title is required in parsed material");
-                }
-
-                int estimatedMinutes = readInteger(taskMap.get("estimatedMinutes"), DEFAULT_ESTIMATED_MINUTES);
-                if (estimatedMinutes <= 0 || estimatedMinutes > 180) {
-                    throw new IllegalArgumentException("Task estimated minutes must be between 1 and 180");
-                }
-
-                parsedTasks.add(new ParsedTask(taskTitle, estimatedMinutes));
-            }
-
-            parsedModules.add(new ParsedModule(moduleTitle, moduleOrderIndex, parsedTasks));
-        }
-
-        return parsedModules;
-    }
 
     private List<AvailabilityWindow> buildAvailabilityWindows(Goal goal, List<TimeSlot> timeSlots) {
         if (timeSlots.isEmpty()) {
@@ -244,42 +197,7 @@ public class ScheduleService {
         throw new IllegalArgumentException("Not enough available time slots to generate schedule");
     }
 
-    private String readString(Object value, String defaultValue) {
-        if (value instanceof String stringValue && StringUtils.hasText(stringValue)) {
-            return stringValue.trim();
-        }
-        return defaultValue;
-    }
 
-    private Integer readInteger(Object value, Integer defaultValue) {
-        if (value instanceof Number numberValue) {
-            return numberValue.intValue();
-        }
-
-        if (value instanceof String stringValue && StringUtils.hasText(stringValue)) {
-            try {
-                return Integer.parseInt(stringValue.trim());
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-
-        return defaultValue;
-    }
-
-    private String limitTitle(String value, String fallback) {
-        String title = StringUtils.hasText(value) ? value.trim() : fallback;
-        if (title.length() <= MAX_TITLE_LENGTH) {
-            return title;
-        }
-        return title.substring(0, MAX_TITLE_LENGTH);
-    }
-
-    private record ParsedModule(String title, Integer orderIndex, List<ParsedTask> tasks) {
-    }
-
-    private record ParsedTask(String title, int estimatedMinutes) {
-    }
 
     private record ScheduledRange(LocalDate date, LocalTime startTime, LocalTime endTime) {
     }
