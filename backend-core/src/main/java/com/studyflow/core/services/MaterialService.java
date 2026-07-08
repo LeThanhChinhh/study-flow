@@ -3,20 +3,18 @@ package com.studyflow.core.services;
 import com.studyflow.core.dtos.materials.MaterialStatusResponse;
 import com.studyflow.core.dtos.materials.MaterialUploadResponse;
 import com.studyflow.core.entities.Material;
-import com.studyflow.core.exceptions.InvalidAiPlanningResultException;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.MaterialRepository;
-import com.studyflow.core.services.ai.PlanningAiResultNormalizer;
-import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningAiResult;
-import com.studyflow.core.services.ai.planning.PlanningAiClient;
 import com.studyflow.core.services.ai.planning.PlanningAiRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Map;
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -28,21 +26,18 @@ public class MaterialService {
     private final MaterialRepository materialRepository;
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
-    private final PlanningAiResultNormalizer planningAiResultNormalizer;
-    private final PlanningAiClient planningAiClient;
+    private final MaterialAiProcessingService materialAiProcessingService;
 
     public MaterialService(
             MaterialRepository materialRepository,
             GoalService goalService,
             CurrentUserService currentUserService,
-            PlanningAiResultNormalizer planningAiResultNormalizer,
-            PlanningAiClient planningAiClient
+            MaterialAiProcessingService materialAiProcessingService
     ) {
         this.materialRepository = materialRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
-        this.planningAiResultNormalizer = planningAiResultNormalizer;
-        this.planningAiClient = planningAiClient;
+        this.materialAiProcessingService = materialAiProcessingService;
     }
 
     @Transactional
@@ -70,19 +65,25 @@ public class MaterialService {
         material.setJobId(jobId);
         material.setStatus("PROCESSING");
 
-        Material savedMaterial = materialRepository.saveAndFlush(material);
-
+        byte[] fileBytes;
         try {
-            PlanningAiRequest request = new PlanningAiRequest(fileName, file.getContentType(), file.getBytes());
-            Map<String, Object> rawAiResult = planningAiClient.generatePlanning(request);
-            PlanningAiResult normalizedResult = planningAiResultNormalizer.normalize(rawAiResult);
-            savedMaterial.setRawJson(normalizedResult.normalizedRawJson());
-            savedMaterial.setStatus("COMPLETED");
-        } catch (InvalidAiPlanningResultException | java.io.IOException e) {
-            savedMaterial.setRawJson(null);
-            savedMaterial.setStatus("FAILED");
+            fileBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read PDF file contents", e);
         }
-        materialRepository.saveAndFlush(savedMaterial);
+        
+        String contentType = file.getContentType();
+
+        Material savedMaterial = materialRepository.saveAndFlush(material);
+        final UUID savedMaterialId = savedMaterial.getId();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                PlanningAiRequest request = new PlanningAiRequest(fileName, contentType, fileBytes);
+                materialAiProcessingService.processMaterialAsync(savedMaterialId, request);
+            }
+        });
 
         return new MaterialUploadResponse(
                 jobId,
@@ -145,6 +146,4 @@ public class MaterialService {
 
         return cleanedFileName;
     }
-
-
 }
