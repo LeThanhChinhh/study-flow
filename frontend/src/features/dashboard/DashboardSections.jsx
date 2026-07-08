@@ -132,7 +132,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
   return (
     <section
       aria-label="Today's learning flow"
-      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full"
+      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden"
     >
       {/* Subtle inner highlight */}
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent" />
@@ -285,7 +285,8 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Task list */}
         {!isLoading && !error && tasks.length > 0 && (
-          <ul className="space-y-0" role="list">
+          <div className="max-h-[520px] overflow-y-auto custom-scrollbar pr-2 -mr-2">
+            <ul className="space-y-0" role="list">
             {tasks.map((task, idx) => {
               const isLast = idx === tasks.length - 1
               const isDone = task.status === 'done'
@@ -314,11 +315,14 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                       }`}
                     >
                       <div className="min-w-0">
-                        <p className={`text-sm leading-snug ${
-                          isDone             ? 'line-through text-stone-400' :
-                          task.status === 'active' ? 'text-violet-700 font-semibold' :
-                          'text-stone-700 font-medium'
-                        }`}>
+                        <p 
+                          className={`text-sm leading-snug truncate ${
+                            isDone             ? 'line-through text-stone-400' :
+                            task.status === 'active' ? 'text-violet-700 font-semibold' :
+                            'text-stone-700 font-medium'
+                          }`}
+                          title={task.title}
+                        >
                           {task.title}
                         </p>
                         <p className="text-xs text-stone-400 mt-0.5">
@@ -343,7 +347,8 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                 </li>
               )
             })}
-          </ul>
+            </ul>
+          </div>
         )}
       </div>
 
@@ -410,7 +415,7 @@ export const PomodoroRing = () => {
 export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => (
   <section
     aria-label="Focus session"
-    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden h-full"
+    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden"
   >
     {/* Ambient rose tint at bottom */}
     <div

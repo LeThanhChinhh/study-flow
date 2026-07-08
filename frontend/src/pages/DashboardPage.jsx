@@ -158,7 +158,7 @@ const DashboardPage = () => {
         />
 
         <div
-          className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise"
+          className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise items-start"
           style={{ animationDelay: '0.08s' }}
         >
           <div className="lg:col-span-3">
