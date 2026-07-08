@@ -8,13 +8,14 @@ import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.MaterialRepository;
 import com.studyflow.core.services.ai.PlanningAiResultNormalizer;
 import com.studyflow.core.services.ai.PlanningAiResultNormalizer.PlanningAiResult;
+import com.studyflow.core.services.ai.planning.PlanningAiClient;
+import com.studyflow.core.services.ai.planning.PlanningAiRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,17 +29,20 @@ public class MaterialService {
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
     private final PlanningAiResultNormalizer planningAiResultNormalizer;
+    private final PlanningAiClient planningAiClient;
 
     public MaterialService(
             MaterialRepository materialRepository,
             GoalService goalService,
             CurrentUserService currentUserService,
-            PlanningAiResultNormalizer planningAiResultNormalizer
+            PlanningAiResultNormalizer planningAiResultNormalizer,
+            PlanningAiClient planningAiClient
     ) {
         this.materialRepository = materialRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
         this.planningAiResultNormalizer = planningAiResultNormalizer;
+        this.planningAiClient = planningAiClient;
     }
 
     @Transactional
@@ -69,11 +73,12 @@ public class MaterialService {
         Material savedMaterial = materialRepository.saveAndFlush(material);
 
         try {
-            Map<String, Object> rawMockResult = buildMockAiResult(fileName);
-            PlanningAiResult normalizedResult = planningAiResultNormalizer.normalize(rawMockResult);
+            PlanningAiRequest request = new PlanningAiRequest(fileName, file.getContentType(), file.getBytes());
+            Map<String, Object> rawAiResult = planningAiClient.generatePlanning(request);
+            PlanningAiResult normalizedResult = planningAiResultNormalizer.normalize(rawAiResult);
             savedMaterial.setRawJson(normalizedResult.normalizedRawJson());
             savedMaterial.setStatus("COMPLETED");
-        } catch (InvalidAiPlanningResultException e) {
+        } catch (InvalidAiPlanningResultException | java.io.IOException e) {
             savedMaterial.setRawJson(null);
             savedMaterial.setStatus("FAILED");
         }
@@ -141,26 +146,5 @@ public class MaterialService {
         return cleanedFileName;
     }
 
-    private Map<String, Object> buildMockAiResult(String fileName) {
-        return Map.of(
-                "source", "mock-planning-flow",
-                "fileName", fileName,
-                "modules", List.of(
-                        Map.of(
-                                "title", "Tổng quan tài liệu",
-                                "orderIndex", 1,
-                                "tasks", List.of(
-                                        Map.of(
-                                                "title", "Đọc và tóm tắt nội dung chính",
-                                                "estimatedMinutes", 25
-                                        ),
-                                        Map.of(
-                                                "title", "Ôn tập các ý quan trọng",
-                                                "estimatedMinutes", 25
-                                        )
-                                )
-                        )
-                )
-        );
-    }
+
 }
