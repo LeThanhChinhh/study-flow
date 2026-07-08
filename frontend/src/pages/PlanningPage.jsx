@@ -558,11 +558,29 @@ const PlanningPage = () => {
           await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
           navigate('/dashboard');
         } catch (err) {
-          const errMsg = err?.message || err?.data?.message || "";
+          const errMsg = err?.data?.message || err?.message || "";
           const normalizedErr = errMsg.toLowerCase();
 
           if (err?.status === 409 || normalizedErr.includes('already generated')) {
             throw new Error("Schedule was already generated for this goal.");
+          }
+
+          if (
+            normalizedErr.includes('not enough available study time') || 
+            normalizedErr.includes('ai estimated')
+          ) {
+            throw new Error("Your available study time is not enough for this AI plan. Add more time slots, extend the deadline, or regenerate a lighter plan.");
+          }
+
+          if (
+            normalizedErr.includes('longest available time slot') || 
+            normalizedErr.includes('longer than your longest available time slot')
+          ) {
+            throw new Error("One or more tasks are longer than your available time windows. Add a longer time slot or regenerate a lighter plan.");
+          }
+
+          if (normalizedErr.includes('could not fit all tasks')) {
+            throw new Error("Your tasks could not fit cleanly into the selected time windows. Add longer study windows, add more availability, or regenerate a lighter plan.");
           }
 
           if (
