@@ -69,18 +69,25 @@ const CalendarTaskCard = ({ task, onClick }) => {
       aria-label={`Open focus session for: ${task.title}`}
     >
       {/* Title row */}
-      <div className="flex items-start gap-1.5 min-w-0">
-        {/* Status dot */}
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[5px] ${cfg.dot}`}
-          aria-hidden="true"
-        />
-        <p 
-          className={`text-xs leading-snug truncate flex-1 min-w-0 ${cfg.title}`}
-          title={task.title}
-        >
-          {task.title}
-        </p>
+      <div className="flex flex-col items-start min-w-0 w-full">
+        <div className="flex items-start gap-1.5 min-w-0 w-full">
+          {/* Status dot */}
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[5px] ${cfg.dot}`}
+            aria-hidden="true"
+          />
+          <p 
+            className={`text-xs leading-snug truncate flex-1 min-w-0 ${cfg.title}`}
+            title={task.title}
+          >
+            {task.title}
+          </p>
+        </div>
+        {task.moduleTitle && (
+          <p className="text-[10px] text-stone-400 truncate pl-[12px] mt-0.5 w-full" title={task.moduleTitle}>
+            {task.moduleTitle}
+          </p>
+        )}
       </div>
 
       {/* Time range + badge row */}

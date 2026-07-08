@@ -325,7 +325,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                         >
                           {task.title}
                         </p>
-                        <p className="text-xs text-stone-400 mt-0.5">
+                        <p className="text-xs text-stone-400 mt-0.5 truncate" title={task.module}>
                           {task.module}
                           {task.mins ? ` · ${task.mins} min` : ''}
                           {task.startTime ? ` · ${task.startTime}` : ''}
@@ -442,7 +442,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
         <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
           <p className="label-overline mb-1">Ready to focus</p>
           <p className="text-sm font-medium text-stone-700 leading-snug">{activeTask.title}</p>
-          <p className="text-xs text-stone-400 mt-0.5">{activeTask.module} · {activeTask.mins} min</p>
+          <p className="text-xs text-stone-400 mt-0.5 truncate w-full" title={activeTask.module}>{activeTask.module} · {activeTask.mins} min</p>
         </div>
         <button id="focus-start-btn" className="btn-accent w-full flex items-center justify-center gap-2" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />

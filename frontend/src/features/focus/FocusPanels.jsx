@@ -105,7 +105,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
 
   const title = currentTask.title
   const subject = currentTask.goalName || 'Study Goal'
-  const module = currentTask.moduleName || 'Scheduled Task'
+  const module = currentTask.moduleTitle || currentTask.moduleName || 'Scheduled Task'
   const estimatedMins = calculateDurationMinutes(currentTask.startTime, currentTask.endTime)
   const intentions = [
     `Focus on: ${title}`,
@@ -141,7 +141,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
           <StudyIcon name="target" size={11} className="text-violet-500"/>
           {subject}
         </span>
-        <span className="badge bg-stone-100 text-stone-600">
+        <span className="badge bg-stone-100 text-stone-600 max-w-full truncate" title={module}>
           {module}
         </span>
         <span className="badge bg-rose-50 text-rose-600">

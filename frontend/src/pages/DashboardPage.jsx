@@ -63,7 +63,7 @@ const DashboardPage = () => {
           return {
             id: t.id,
             title: t.title,
-            module: t.moduleName || t.goalName || 'Study Task',
+            module: t.moduleTitle || t.moduleName || t.goalName || 'Study Task',
             mins: calculateDurationMinutes(t.startTime, t.endTime),
             status: mapTaskStatus(t.status),
             orderIndex: t.orderIndex || 0,
