@@ -1,11 +1,13 @@
 package com.studyflow.core.services.ai.planning;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
 @Service
+@ConditionalOnProperty(prefix = "studyflow.ai.planning", name = "provider", havingValue = "mock", matchIfMissing = true)
 public class MockPlanningAiClient implements PlanningAiClient {
 
     @Override
