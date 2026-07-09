@@ -21,3 +21,6 @@ export const TODAY_TIP = FOCUS_TIPS[dayIndex % FOCUS_TIPS.length]
 
 export const POMODORO_MINUTES = 25
 export const POMODORO_SECONDS = POMODORO_MINUTES * 60
+
+//pomodoro with 10 seconds for testing
+//export const POMODORO_SECONDS = 10

@@ -289,27 +289,109 @@ const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => {
   )
 }
 
-const UploadStep = ({ fileForm, setFileForm }) => (
-  <div className="rounded-3xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-10 text-center hover:bg-violet-50/60 transition-colors">
-    <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-violet-100">
-      <StudyIcon name="upload" size={24} className="text-violet-600" />
-    </div>
-    <h3 className="text-base font-semibold text-stone-800">Drop your PDF here</h3>
-    <p className="text-sm text-stone-500 mt-1 max-w-sm mx-auto leading-relaxed">
+const UploadStep = ({ fileForm, setFileForm }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const [localError, setLocalError] = useState('')
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const validateAndSetFile = (file) => {
+    setLocalError('')
+    if (!file) return
+
+    const isValidPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (!isValidPdf) {
+      setLocalError('Please upload a PDF file.')
+      setFileForm(null)
+      return
+    }
+    setFileForm(file)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    validateAndSetFile(file)
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    validateAndSetFile(file)
+    e.target.value = ''
+  }
+
+  const removeFile = () => {
+    setFileForm(null)
+    setLocalError('')
+  }
+
+  return (
+    <div 
+      className={`rounded-3xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
+        isDragging 
+          ? 'border-violet-400 bg-violet-50/70 scale-[1.01]' 
+          : 'border-violet-200 bg-violet-50/30 hover:bg-violet-50/60'
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-violet-100">
+        <StudyIcon name="upload" size={24} className="text-violet-600" />
+      </div>
+      <h3 className="text-base font-semibold text-stone-800">
+        {isDragging ? 'Drop it here!' : 'Drop your PDF here'}
+      </h3>
+      <p className="text-sm text-stone-500 mt-1 max-w-sm mx-auto leading-relaxed">
+        {fileForm ? (
+          <span className="font-medium text-violet-700 flex items-center justify-center gap-1.5 mt-2">
+            <StudyIcon name="file-text" size={14} />
+            {fileForm.name} {fileForm.size ? `(${(fileForm.size / 1024 / 1024).toFixed(2)} MB)` : ''}
+          </span>
+        ) : 'Upload your textbook, notes, or syllabus. We will extract the study tasks for you.'}
+      </p>
+
+      {localError && (
+        <p className="text-sm text-red-500 mt-3 font-medium bg-red-50 py-1.5 px-3 rounded-lg inline-block">
+          {localError}
+        </p>
+      )}
+
       {fileForm ? (
-        <span className="font-medium text-violet-700 flex items-center justify-center gap-1.5 mt-2">
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <label className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors cursor-pointer">
+            <StudyIcon name="file-text" size={14} />
+            Choose a different file
+            <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
+          </label>
+          <button 
+            type="button" 
+            onClick={removeFile}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-50 text-red-600 px-4 py-2.5 text-sm font-semibold hover:bg-red-100 transition-colors"
+          >
+            <StudyIcon name="x" size={14} />
+            Remove file
+          </button>
+        </div>
+      ) : (
+        <label className="mt-6 mx-auto inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition-colors cursor-pointer">
           <StudyIcon name="file-text" size={14} />
-          {fileForm.name} {fileForm.size ? `(${(fileForm.size / 1024 / 1024).toFixed(2)} MB)` : ''}
-        </span>
-      ) : 'Upload your textbook, notes, or syllabus. We will extract the study tasks for you.'}
-    </p>
-    <label className="mt-6 mx-auto inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition-colors cursor-pointer">
-      <StudyIcon name="file-text" size={14} />
-      {fileForm ? 'Choose a different file' : 'Browse files'}
-      <input type="file" accept=".pdf" className="hidden" onChange={e => setFileForm(e.target.files[0])} />
-    </label>
-  </div>
-)
+          Browse files
+          <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
+        </label>
+      )}
+    </div>
+  )
+}
 
 const PollingStep = ({ parsedMaterial, errorMsg }) => (
   <div className="space-y-4">
@@ -323,15 +405,10 @@ const PollingStep = ({ parsedMaterial, errorMsg }) => (
             {parsedMaterial ? 'AI parsing completed' : errorMsg ? 'Parsing Failed' : 'Analyzing your document...'}
           </h3>
           <p className={`text-xs mt-0.5 ${parsedMaterial ? 'text-emerald-600' : errorMsg ? 'text-red-600' : 'text-stone-500'}`}>
-            {parsedMaterial ? 'Material parsed successfully. Ready to generate schedule.' : errorMsg ? 'We could not parse this document. Try a clearer text-based PDF.' : 'Extracting study tasks. This may take a moment.'}
+            {parsedMaterial ? 'Material parsed successfully. Ready to generate schedule.' : errorMsg ? 'We could not parse this document. Try a clearer text-based PDF.' : 'Gemini is reading your PDF and building a study plan. This may take 30–90 seconds depending on the file size.'}
           </p>
         </div>
       </div>
-      {!parsedMaterial && !errorMsg && (
-        <div className="mt-5 h-2 bg-white rounded-full overflow-hidden border border-stone-100">
-          <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-violet-500 to-violet-400 progress-fill animate-pulse" />
-        </div>
-      )}
     </div>
     <p className="text-xs text-stone-400 flex items-center justify-center gap-1.5 mt-4">
       <StudyIcon name="timer" size={12} className={!parsedMaterial && !errorMsg ? 'animate-spin' : 'hidden'} />
@@ -558,11 +635,29 @@ const PlanningPage = () => {
           await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id });
           navigate('/dashboard');
         } catch (err) {
-          const errMsg = err?.message || err?.data?.message || "";
+          const errMsg = err?.data?.message || err?.message || "";
           const normalizedErr = errMsg.toLowerCase();
 
           if (err?.status === 409 || normalizedErr.includes('already generated')) {
             throw new Error("Schedule was already generated for this goal.");
+          }
+
+          if (
+            normalizedErr.includes('not enough available study time') || 
+            normalizedErr.includes('ai estimated')
+          ) {
+            throw new Error("Your available study time is not enough for this AI plan. Add more time slots, extend the deadline, or regenerate a lighter plan.");
+          }
+
+          if (
+            normalizedErr.includes('longest available time slot') || 
+            normalizedErr.includes('longer than your longest available time slot')
+          ) {
+            throw new Error("One or more tasks are longer than your available time windows. Add a longer time slot or regenerate a lighter plan.");
+          }
+
+          if (normalizedErr.includes('could not fit all tasks')) {
+            throw new Error("Your tasks could not fit cleanly into the selected time windows. Add longer study windows, add more availability, or regenerate a lighter plan.");
           }
 
           if (

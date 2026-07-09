@@ -3,8 +3,10 @@ package com.studyflow.core.services;
 import com.studyflow.core.dtos.tasks.CreateTaskRequest;
 import com.studyflow.core.dtos.tasks.TaskResponse;
 import com.studyflow.core.dtos.tasks.UpdateTaskRequest;
+import com.studyflow.core.entities.LearningModule;
 import com.studyflow.core.entities.Task;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
+import com.studyflow.core.repositories.LearningModuleRepository;
 import com.studyflow.core.repositories.TaskRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -13,8 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
@@ -24,15 +29,18 @@ public class TaskService {
     );
 
     private final TaskRepository taskRepository;
+    private final LearningModuleRepository learningModuleRepository;
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
 
     public TaskService(
             TaskRepository taskRepository,
+            LearningModuleRepository learningModuleRepository,
             GoalService goalService,
             CurrentUserService currentUserService
     ) {
         this.taskRepository = taskRepository;
+        this.learningModuleRepository = learningModuleRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
     }
@@ -88,13 +96,24 @@ public class TaskService {
             tasks = taskRepository.findByUserIdOrderByOrderIndexAscCreatedAtDesc(userId);
         }
 
-        return tasks.stream().map(TaskResponse::from).toList();
+        Set<UUID> moduleIds = tasks.stream()
+                .map(Task::getModuleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<UUID, String> moduleTitleMap = learningModuleRepository.findAllById(moduleIds).stream()
+                .collect(Collectors.toMap(LearningModule::getId, LearningModule::getTitle));
+
+        return tasks.stream()
+                .map(task -> TaskResponse.from(task, moduleTitleMap.get(task.getModuleId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public TaskResponse getTask(UUID taskId, Authentication authentication) {
         Task task = findOwnedTask(taskId, authentication);
-        return TaskResponse.from(task);
+        String moduleTitle = findModuleTitle(task.getModuleId());
+        return TaskResponse.from(task, moduleTitle);
     }
 
     @Transactional
@@ -135,7 +154,8 @@ public class TaskService {
         }
 
         Task savedTask = taskRepository.saveAndFlush(task);
-        return TaskResponse.from(savedTask);
+        String moduleTitle = findModuleTitle(savedTask.getModuleId());
+        return TaskResponse.from(savedTask, moduleTitle);
     }
 
     @Transactional
@@ -160,5 +180,14 @@ public class TaskService {
         if (!VALID_STATUSES.contains(status)) {
             throw new IllegalArgumentException("Status must be PENDING, IN_PROGRESS, or COMPLETED");
         }
+    }
+
+    private String findModuleTitle(UUID moduleId) {
+        if (moduleId == null) {
+            return null;
+        }
+        return learningModuleRepository.findById(moduleId)
+                .map(LearningModule::getTitle)
+                .orElse(null);
     }
 }

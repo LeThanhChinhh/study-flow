@@ -35,7 +35,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
   return (
     <div
       className={[
-        'flex flex-col min-w-0 rounded-xl border overflow-hidden transition-all duration-200',
+        'flex flex-col min-w-0 rounded-xl border overflow-hidden transition-all duration-200 h-[calc(100vh-280px)] min-h-[480px]',
         isToday
           ? 'bg-violet-50/70 border-violet-200 shadow-sm'
           : isWeekend
@@ -85,7 +85,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
       </div>
 
       {/* Task list */}
-      <div className="flex flex-col gap-1.5 p-2 flex-1 min-h-[120px]">
+      <div className="flex flex-col gap-1.5 p-2 flex-1 overflow-y-auto custom-scrollbar">
         {sorted.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className="text-[10px] text-stone-200 select-none">—</span>
@@ -220,7 +220,7 @@ export const EmptyWeek = ({ onCreatePlan, onToday }) => (
 /* ─── Skeleton loader ─────────────────────────────────────────────────────── */
 
 export const SkeletonColumn = () => (
-  <div className="flex flex-col rounded-xl border border-stone-100 bg-white/80 min-h-[200px]">
+  <div className="flex flex-col rounded-xl border border-stone-100 bg-white/80 h-[calc(100vh-280px)] min-h-[480px]">
     <div className="px-2 pt-2.5 pb-2 border-b border-stone-100 text-center space-y-1.5">
       <div className="h-2.5 w-6 bg-stone-100 rounded mx-auto animate-pulse" />
       <div className="w-8 h-8 rounded-full bg-stone-100 mx-auto animate-pulse" />

@@ -12,6 +12,7 @@ public record TaskResponse(
         UUID id,
         UUID goalId,
         UUID moduleId,
+        String moduleTitle,
         String title,
         LocalDate scheduledDate,
         @JsonFormat(pattern = "HH:mm")
@@ -25,10 +26,15 @@ public record TaskResponse(
         OffsetDateTime updatedAt
 ) {
     public static TaskResponse from(Task task) {
+        return from(task, null);
+    }
+
+    public static TaskResponse from(Task task, String moduleTitle) {
         return new TaskResponse(
                 task.getId(),
                 task.getGoalId(),
                 task.getModuleId(),
+                moduleTitle,
                 task.getTitle(),
                 task.getScheduledDate(),
                 task.getStartTime(),

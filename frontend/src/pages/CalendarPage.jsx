@@ -101,7 +101,7 @@ const CalendarPage = () => {
 
       {/* ── Top navigation bar ── */}
       <nav className="nav-glass sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm">
@@ -129,7 +129,7 @@ const CalendarPage = () => {
       </nav>
 
       {/* ── Main content ── */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ── Error state ── */}
         {!isLoading && error && (
@@ -200,7 +200,7 @@ const CalendarPage = () => {
               />
 
               <div className="overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-                <div className="grid grid-cols-7 gap-2 min-w-[980px]">
+                <div className="grid grid-cols-7 gap-2 min-w-[1180px] xl:min-w-0">
                 {isLoading
                   ? Array.from({ length: 7 }).map((_, i) => <SkeletonColumn key={i} />)
                   : weekTaskCount === 0
@@ -241,7 +241,7 @@ const CalendarPage = () => {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <footer className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-stone-200/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-stone-400">© 2026 StudyFlow</p>
           <p className="text-xs text-stone-300">v0.1.0</p>

@@ -22,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -78,6 +79,8 @@ public class ScheduleService {
         
         List<TimeSlot> timeSlots = timeSlotRepository.findByUserIdOrderByDayOfWeekAscStartTimeAsc(userId);
         List<AvailabilityWindow> availabilityWindows = buildAvailabilityWindows(goal, timeSlots);
+
+        validateScheduleCapacity(parsedModules, availabilityWindows);
 
         int taskOrderIndex = 0;
         List<Task> generatedTasks = new ArrayList<>();
@@ -182,6 +185,58 @@ public class ScheduleService {
         }
 
         return windows;
+    }
+
+    private void validateScheduleCapacity(List<PlanningModule> parsedModules, List<AvailabilityWindow> availabilityWindows) {
+        long totalRequiredMinutes = 0;
+        int maxTaskMinutes = 0;
+
+        for (PlanningModule module : parsedModules) {
+            for (PlanningTask task : module.tasks()) {
+                totalRequiredMinutes += task.estimatedMinutes();
+                if (task.estimatedMinutes() > maxTaskMinutes) {
+                    maxTaskMinutes = task.estimatedMinutes();
+                }
+            }
+        }
+
+        long totalAvailableMinutes = 0;
+        long maxAvailableWindowMinutes = 0;
+
+        for (AvailabilityWindow window : availabilityWindows) {
+            long windowMinutes = Duration.between(window.startTime(), window.endTime()).toMinutes();
+            totalAvailableMinutes += windowMinutes;
+            if (windowMinutes > maxAvailableWindowMinutes) {
+                maxAvailableWindowMinutes = windowMinutes;
+            }
+        }
+
+        if (totalRequiredMinutes > totalAvailableMinutes) {
+            throw new IllegalArgumentException("Not enough available study time. AI estimated " + totalRequiredMinutes + " minutes, but your selected time slots provide only " + totalAvailableMinutes + " minutes. Add more time slots, extend the deadline, or reduce the plan.");
+        }
+
+        if (maxTaskMinutes > maxAvailableWindowMinutes) {
+            throw new IllegalArgumentException("At least one task is longer than your longest available time slot. Longest task: " + maxTaskMinutes + " minutes, longest slot: " + maxAvailableWindowMinutes + " minutes. Add a longer time slot or regenerate a lighter plan.");
+        }
+
+        List<AvailabilityWindow> clonedWindows = cloneAvailabilityWindows(availabilityWindows);
+        for (PlanningModule module : parsedModules) {
+            for (PlanningTask task : module.tasks()) {
+                try {
+                    allocateNextRange(clonedWindows, task.estimatedMinutes());
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Could not fit all tasks into your selected time slots. Try adding longer time windows, adding more availability, or regenerating a lighter plan.");
+                }
+            }
+        }
+    }
+
+    private List<AvailabilityWindow> cloneAvailabilityWindows(List<AvailabilityWindow> availabilityWindows) {
+        List<AvailabilityWindow> cloned = new ArrayList<>();
+        for (AvailabilityWindow window : availabilityWindows) {
+            cloned.add(new AvailabilityWindow(window.date(), window.startTime(), window.endTime(), window.startTime()));
+        }
+        return cloned;
     }
 
     private ScheduledRange allocateNextRange(List<AvailabilityWindow> windows, int estimatedMinutes) {

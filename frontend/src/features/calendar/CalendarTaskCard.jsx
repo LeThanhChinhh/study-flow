@@ -69,28 +69,38 @@ const CalendarTaskCard = ({ task, onClick }) => {
       aria-label={`Open focus session for: ${task.title}`}
     >
       {/* Title row */}
-      <div className="flex items-start gap-1.5 min-w-0">
-        {/* Status dot */}
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[5px] ${cfg.dot}`}
-          aria-hidden="true"
-        />
-        <span className={`text-xs leading-snug truncate flex-1 ${cfg.title}`}>
-          {task.title}
-        </span>
+      <div className="flex flex-col items-start min-w-0 w-full">
+        <div className="flex items-start gap-1.5 min-w-0 w-full">
+          {/* Status dot */}
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[5px] ${cfg.dot}`}
+            aria-hidden="true"
+          />
+          <p 
+            className={`text-xs leading-snug truncate flex-1 min-w-0 ${cfg.title}`}
+            title={task.title}
+          >
+            {task.title}
+          </p>
+        </div>
+        {task.moduleTitle && (
+          <p className="text-[10px] text-stone-400 truncate pl-[12px] mt-0.5 w-full" title={task.moduleTitle}>
+            {task.moduleTitle}
+          </p>
+        )}
       </div>
 
       {/* Time range + badge row */}
       <div className="flex items-center gap-1 mt-1 pl-3 min-w-0 flex-wrap">
         {timeRange ? (
-          <span className="text-[10px] text-stone-400 tabular-nums shrink-0 flex items-center gap-0.5 truncate max-w-[100%]">
+          <span className="text-[10px] text-stone-400 tabular-nums shrink-0 flex items-center gap-0.5 max-w-full">
             <StudyIcon name="clock" size={9} className="text-stone-300 shrink-0" />
             <span className="truncate">{timeRange}</span>
           </span>
         ) : (
           <span />
         )}
-        <span className={`badge text-[9px] px-1.5 py-px shrink-0 whitespace-nowrap ${cfg.badge}`}>
+        <span className={`badge text-[9px] px-1.5 py-px shrink-0 whitespace-nowrap max-w-full truncate ${cfg.badge}`}>
           {task.status === 'IN_PROGRESS' ? (
             <StudyIcon name="zap" size={8} className="text-violet-500" />
           ) : task.status === 'COMPLETED' ? (

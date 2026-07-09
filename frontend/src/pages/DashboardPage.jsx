@@ -63,7 +63,7 @@ const DashboardPage = () => {
           return {
             id: t.id,
             title: t.title,
-            module: t.moduleName || t.goalName || 'Study Task',
+            module: t.moduleTitle || t.moduleName || t.goalName || 'Study Task',
             mins: calculateDurationMinutes(t.startTime, t.endTime),
             status: mapTaskStatus(t.status),
             orderIndex: t.orderIndex || 0,
@@ -158,7 +158,7 @@ const DashboardPage = () => {
         />
 
         <div
-          className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise"
+          className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise items-start"
           style={{ animationDelay: '0.08s' }}
         >
           <div className="lg:col-span-3">
