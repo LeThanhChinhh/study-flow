@@ -604,9 +604,9 @@ const QUICK_ACTIONS = [
     cls: 'bg-white/80 text-stone-600 border-stone-100 hover:bg-white hover:border-stone-200',
   },
   {
-    id:  'qa-notes',
-    icon: 'pencil',
-    label: 'Review notes',
+    id:  'qa-availability',
+    icon: 'clock',
+    label: 'Edit availability',
     cls: 'bg-white/80 text-stone-600 border-stone-100 hover:bg-white hover:border-stone-200',
   },
   {
@@ -617,7 +617,7 @@ const QUICK_ACTIONS = [
   },
 ]
 
-export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onReviewNotes, onViewSchedule }) => (
+export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onEditAvailability, onViewSchedule }) => (
   <section aria-label="Quick actions" className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
     <h2 className="label-overline mb-3">Quick Actions</h2>
     <div className="flex flex-wrap gap-2.5">
@@ -628,7 +628,7 @@ export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onReviewNotes, o
           onClick={
             a.id === 'qa-upload' ? onUploadPdf :
             a.id === 'qa-kanban' ? onOpenWorkspace :
-            a.id === 'qa-notes' ? onReviewNotes :
+            a.id === 'qa-availability' ? onEditAvailability :
             a.id === 'qa-calendar' ? onViewSchedule :
             undefined
           }
