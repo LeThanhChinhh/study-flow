@@ -7,3 +7,7 @@ export const getTasks = (params = {}) => {
 export const getTaskById = (taskId) => {
   return apiClient.get(`/api/v1/tasks/${taskId}`);
 };
+
+export const updateTask = (taskId, payload) => {
+  return apiClient.put(`/api/v1/tasks/${taskId}`, payload);
+};

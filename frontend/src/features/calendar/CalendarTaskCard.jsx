@@ -42,8 +42,7 @@ const getStatusConfig = (status) =>
  */
 const CalendarTaskCard = ({ task, onClick }) => {
   const cfg       = getStatusConfig(task.status)
-  const isCompleted = task.status === 'COMPLETED'
-  const isClickable = !isCompleted && Boolean(task.id)
+  const isClickable = Boolean(task.id)
 
   const timeRange =
     task.startTime && task.endTime
@@ -66,7 +65,7 @@ const CalendarTaskCard = ({ task, onClick }) => {
         'focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1',
         cfg.card,
       ].join(' ')}
-      aria-label={`Open focus session for: ${task.title}`}
+      aria-label={`View details for: ${task.title}`}
     >
       {/* Title row */}
       <div className="flex flex-col items-start min-w-0 w-full">
