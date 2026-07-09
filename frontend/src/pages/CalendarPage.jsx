@@ -1,20 +1,12 @@
-/**
- * CalendarPage.jsx
- *
- * Weekly calendar. Fetches tasks from getTasks() and renders them in a
- * 7-column week grid. Clicking a task card opens CalendarTaskDetailModal
- * where the user can view details, change status, or start a focus session.
- *
- * State:
- *   weekAnchor    — any date within the displayed week; used to derive weekDays
- *   tasks         — raw tasks from API
- *   isLoading     — fetch in progress
- *   error         — fetch error message
- *   selectedTask  — task currently shown in the detail modal (null = closed)
- */
-
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
 import {
   DayColumn,
@@ -31,10 +23,11 @@ import {
   addDays,
 } from '../features/calendar/calendarUtils'
 import StudyIcon from '../components/StudyIcon'
-import { getTasks } from '../api/taskApi'
+import { getTasks, updateTask } from '../api/taskApi'
 import CalendarTaskDetailModal from '../features/calendar/CalendarTaskDetailModal'
+import CalendarTaskCard from '../features/calendar/CalendarTaskCard'
 
-/* ─── CalendarPage ──────────────────────────────────────────────────────── */
+/*  CalendarPage  */
 
 const CalendarPage = () => {
   const navigate = useNavigate()
@@ -46,7 +39,36 @@ const CalendarPage = () => {
   const [error,      setError]      = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
 
-  /* ── Data fetching ───────────────────────────────────────────────────── */
+  // Drag-drop state
+  const [movingTaskId,    setMovingTaskId]    = useState(null)
+  const [moveError,       setMoveError]       = useState(null)
+  const [activeDragTask,  setActiveDragTask]  = useState(null)
+  const [dragOverlayWidth, setDragOverlayWidth] = useState(160)
+
+  // Snapshot captured at drag-start for rollback — avoids tasks closure in handleDragEnd
+  const dragSnapshotRef = useRef(null)
+
+  // Suppress opening modal immediately after a drag ends
+  const suppressTaskClickRef      = useRef(false)
+  const suppressTaskClickTimerRef = useRef(null)
+
+  // Cleanup suppression timer on unmount
+  useEffect(() => {
+    return () => {
+      if (suppressTaskClickTimerRef.current) {
+        clearTimeout(suppressTaskClickTimerRef.current)
+      }
+    }
+  }, [])
+
+  /*  dnd-kit sensors  */
+
+  // PointerSensor with 5px activation distance prevents accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  /*  Data fetching  */
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -66,7 +88,7 @@ const CalendarPage = () => {
     fetchTasks()
   }, [fetchTasks])
 
-  /* ── Derived data ────────────────────────────────────────────────────── */
+  /*  Derived data  */
 
   const weekDays    = useMemo(() => getWeekDays(weekAnchor), [weekAnchor])
   const weekStart   = weekDays[0]
@@ -81,19 +103,20 @@ const CalendarPage = () => {
     }, 0)
   }, [weekDays, byDate])
 
-  /* ── Navigation handlers ─────────────────────────────────────────────── */
+  /*  Navigation handlers  */
 
   const goToPrevWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), -7))
   const goToNextWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), 7))
   const goToToday    = () => setWeekAnchor(new Date())
 
-  /* ── Task click → open detail modal ─────────────────────────────────── */
+  /*  Task click → open detail modal  */
 
   const handleTaskClick = (task) => {
+    if (suppressTaskClickRef.current) return
     setSelectedTask(task)
   }
 
-  /* ── Task updated (status change from modal) ─────────────────────────── */
+  /*  Task updated (status change from modal)  */
 
   const handleTaskUpdated = (updatedTask) => {
     let mergedTask = updatedTask
@@ -111,17 +134,116 @@ const CalendarPage = () => {
     )
   }
 
-  /* ── Render helpers ──────────────────────────────────────────────────── */
+  /*  Drag-drop suppress click helpers  */
+
+  const releaseTaskClickSuppression = useCallback(() => {
+    if (suppressTaskClickTimerRef.current) {
+      clearTimeout(suppressTaskClickTimerRef.current)
+    }
+    suppressTaskClickTimerRef.current = setTimeout(() => {
+      suppressTaskClickRef.current = false
+    }, 120)
+  }, [])
+
+  const handleDragStart = useCallback(({ active }) => {
+    suppressTaskClickRef.current = true
+    const task = active.data.current?.task
+    if (task) {
+      setActiveDragTask(task)
+      // Capture the element's actual width so DragOverlay matches the original card size
+      // — this keeps the cursor at the same relative position within the card during drag
+      const initialWidth = active.rect.current?.initial?.width
+      if (initialWidth) setDragOverlayWidth(initialWidth)
+      // Capture rollback snapshot at drag-start so handleDragEnd has no tasks dependency
+      setTasks(current => {
+        dragSnapshotRef.current = current
+        return current
+      })
+    }
+  }, [])
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDragTask(null)
+    dragSnapshotRef.current = null
+    releaseTaskClickSuppression()
+  }, [releaseTaskClickSuppression])
+
+  /*  Drag-drop handler  */
+
+  const handleDragEnd = useCallback(async ({ active, over }) => {
+    try {
+      setActiveDragTask(null)
+
+      // No valid drop target
+      if (!over) return
+
+      const draggedTask = active.data.current?.task
+      if (!draggedTask) return
+
+      const targetDate = over.id // YYYY-MM-DD string (droppable id = dateStr)
+
+      // No-op: dropped on the same date
+      if (draggedTask.scheduledDate === targetDate) return
+
+      // Use snapshot captured at drag-start (no tasks closure needed)
+      const snapshot = dragSnapshotRef.current
+
+      // Optimistic update
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === draggedTask.id ? { ...t, scheduledDate: targetDate } : t
+        )
+      )
+      setMovingTaskId(draggedTask.id)
+      setMoveError(null)
+
+      try {
+        const updated = await updateTask(draggedTask.id, {
+          scheduledDate: targetDate,
+          startTime: draggedTask.startTime,
+          endTime: draggedTask.endTime,
+        })
+
+        // Merge response, preserving moduleTitle if backend omits it
+        setTasks(prev =>
+          prev.map(t => {
+            if (t.id !== draggedTask.id) return t
+            return { ...t, ...updated, moduleTitle: updated.moduleTitle ?? t.moduleTitle }
+          })
+        )
+      } catch (err) {
+        // Rollback to snapshot
+        if (snapshot) setTasks(snapshot)
+
+        // Extract backend error message if available
+        const msg =
+          err?.data?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
+          'Could not move task. Please try again.'
+        setMoveError(msg)
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setMoveError(null), 5000)
+      } finally {
+        setMovingTaskId(null)
+        dragSnapshotRef.current = null
+      }
+    } finally {
+      releaseTaskClickSuppression()
+    }
+  }, [releaseTaskClickSuppression])  // tasks removed from deps — snapshot via ref
+
+  /*  Render helpers  */
 
   const hasTasks = tasks.length > 0
 
-  /* ─────────────────────────────────────────────────────────────────────── */
 
   return (
     <div className="min-h-screen">
       <StudyOrbitBackdrop />
 
-      {/* ── Top navigation bar ── */}
+      {/*  Top navigation bar  */}
       <nav className="nav-glass sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
           {/* Brand */}
@@ -150,10 +272,28 @@ const CalendarPage = () => {
         </div>
       </nav>
 
-      {/* ── Main content ── */}
+      {/*  Main content  */}
       <main className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* ── Error state ── */}
+        {/*  Drag-drop error banner  */}
+        {moveError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center gap-2.5 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700"
+          >
+            <StudyIcon name="zap" size={13} className="text-rose-400 shrink-0" />
+            <span className="flex-1">{moveError}</span>
+            <button
+              onClick={() => setMoveError(null)}
+              className="text-rose-400 hover:text-rose-600 transition-colors shrink-0"
+              aria-label="Dismiss"
+            >
+              <StudyIcon name="x" size={13} />
+            </button>
+          </div>
+        )}
+
+        {/*  Error state  */}
         {!isLoading && error && (
           <div className="card p-10 flex flex-col items-center justify-center text-center gap-4">
             <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center">
@@ -175,7 +315,7 @@ const CalendarPage = () => {
           </div>
         )}
 
-        {/* ── Global empty state (no tasks at all) ── */}
+        {/*  Global empty state (no tasks at all)  */}
         {!isLoading && !error && !hasTasks && (
           <div className="card p-12 flex flex-col items-center justify-center text-center gap-5">
             <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center">
@@ -199,7 +339,7 @@ const CalendarPage = () => {
           </div>
         )}
 
-        {/* ── Calendar content ── */}
+        {/*  Calendar content  */}
         {!error && (isLoading || hasTasks) && (
           <div className="space-y-5">
 
@@ -213,7 +353,7 @@ const CalendarPage = () => {
               />
             </div>
 
-            {/* 7-column week grid */}
+            {/* 7-column week grid — wrapped in DndContext */}
             <div className="card p-4 relative">
               {/* Subtle gradient separator */}
               <div
@@ -221,32 +361,59 @@ const CalendarPage = () => {
                 className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/50 to-transparent rounded-t-2xl"
               />
 
-              <div className="overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-                <div className="grid grid-cols-7 gap-2 min-w-[1180px] xl:min-w-0">
-                {isLoading
-                  ? Array.from({ length: 7 }).map((_, i) => <SkeletonColumn key={i} />)
-                  : weekTaskCount === 0
-                  ? (
-                    <EmptyWeek
-                      onCreatePlan={() => navigate('/planning')}
-                      onToday={goToToday}
-                    />
-                  )
-                  : weekDays.map(date => {
-                      const ds = formatLocalDate(date)
-                      return (
-                        <DayColumn
-                          key={ds}
-                          date={date}
-                          tasks={byDate[ds] ?? []}
-                          isToday={ds === todayStr}
-                          onTaskClick={handleTaskClick}
-                        />
-                      )
-                    })
-                }
+              <DndContext
+                sensors={sensors}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <div className="overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+                  <div className="grid grid-cols-7 gap-2 min-w-[1180px] xl:min-w-0">
+                  {isLoading
+                    ? Array.from({ length: 7 }).map((_, i) => <SkeletonColumn key={i} />)
+                    : weekTaskCount === 0
+                    ? (
+                      <EmptyWeek
+                        onCreatePlan={() => navigate('/planning')}
+                        onToday={goToToday}
+                      />
+                    )
+                    : weekDays.map(date => {
+                        const ds = formatLocalDate(date)
+                        return (
+                          <DayColumn
+                            key={ds}
+                            date={date}
+                            tasks={byDate[ds] ?? []}
+                            isToday={ds === todayStr}
+                            onTaskClick={handleTaskClick}
+                            isMovingTaskId={movingTaskId}
+                          />
+                        )
+                      })
+                  }
+                  </div>
                 </div>
-              </div>
+
+                {/* DragOverlay renders the floating card above overflow-hidden columns */}
+                <DragOverlay dropAnimation={null}>
+                  {activeDragTask ? (
+                    <div style={{
+                      width: dragOverlayWidth,
+                      boxShadow: '0 8px 24px rgba(109,40,217,0.15)',
+                      borderRadius: '0.5rem',
+                      cursor: 'grabbing',
+                    }}>
+                      <CalendarTaskCard
+                        task={activeDragTask}
+                        onClick={() => {}}
+                        isMoving={false}
+                        enableDrag={false}
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </div>
 
             {/* When loaded + has tasks in week, still show unscheduled below */}
@@ -262,14 +429,14 @@ const CalendarPage = () => {
 
       </main>
 
-      {/* ── Footer ── */}
+      {/*  Footer  */}
       <footer className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-stone-200/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-stone-400">© 2026 StudyFlow</p>
           <p className="text-xs text-stone-300">v0.1.0</p>
         </div>
       </footer>
-      {/* ── Task Detail Modal ── */}
+      {/*  Task Detail Modal  */}
       <CalendarTaskDetailModal
         task={selectedTask}
         onClose={() => setSelectedTask(null)}

@@ -1,18 +1,5 @@
-/**
- * CalendarWeekView.jsx
- *
- * Exports named sub-components used by CalendarPage:
- *   - DayColumn
- *   - WeekNavHeader
- *   - UnscheduledSection
- *   - SkeletonColumn
- *   - EmptyWeek
- *
- * CalendarPage is the stateful orchestrator.
- * Everything here is pure / presentational.
- */
-
 import StudyIcon from '../../components/StudyIcon'
+import { useDroppable } from '@dnd-kit/core'
 import CalendarTaskCard from './CalendarTaskCard'
 import {
   formatLocalDate,
@@ -22,9 +9,9 @@ import {
   MONTH_NAMES_SHORT,
 } from './calendarUtils'
 
-/* ─── Day Column ─────────────────────────────────────────────────────────── */
+/*  Day Column  */
 
-export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
+export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId }) => {
   const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1 // 0=Mon…6=Sun
   const dayName  = WEEK_DAY_NAMES_SHORT[dayIndex]
   const dayNum   = date.getDate()
@@ -32,8 +19,12 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
   const sorted   = sortTasksForCalendar(tasks)
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
+  const dateStr = formatLocalDate(date)
+  const { setNodeRef, isOver } = useDroppable({ id: dateStr })
+
   return (
     <div
+      ref={setNodeRef}
       className={[
         'flex flex-col min-w-0 rounded-xl border overflow-hidden transition-all duration-200 h-[calc(100vh-280px)] min-h-[480px]',
         isToday
@@ -41,6 +32,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
           : isWeekend
           ? 'bg-stone-50/50 border-stone-100/70'
           : 'bg-white/80 border-stone-100',
+        isOver ? 'ring-2 ring-violet-400 ring-inset' : '',
       ].join(' ')}
     >
       {/* Day header */}
@@ -96,6 +88,8 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
               key={task.id}
               task={task}
               onClick={() => onTaskClick(task)}
+              isMoving={isMovingTaskId === task.id}
+              enableDrag
             />
           ))
         )}
@@ -104,7 +98,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
   )
 }
 
-/* ─── Week Navigation Header ─────────────────────────────────────────────── */
+/*  Week Navigation Header  */
 
 export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
   const weekEnd  = addDays(weekStart, 6)
@@ -165,7 +159,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
   )
 }
 
-/* ─── Unscheduled Section ─────────────────────────────────────────────────── */
+/*  Unscheduled Section  */
 
 export const UnscheduledSection = ({ tasks, onTaskClick }) => {
   if (!tasks || tasks.length === 0) return null
@@ -193,7 +187,7 @@ export const UnscheduledSection = ({ tasks, onTaskClick }) => {
   )
 }
 
-/* ─── Empty week state ───────────────────────────────────────────────────── */
+/*  Empty week state  */
 
 export const EmptyWeek = ({ onCreatePlan, onToday }) => (
   <div className="col-span-7 flex flex-col items-center justify-center py-14 text-center">
@@ -217,7 +211,7 @@ export const EmptyWeek = ({ onCreatePlan, onToday }) => (
   </div>
 )
 
-/* ─── Skeleton loader ─────────────────────────────────────────────────────── */
+/*  Skeleton loader  */
 
 export const SkeletonColumn = () => (
   <div className="flex flex-col rounded-xl border border-stone-100 bg-white/80 h-[calc(100vh-280px)] min-h-[480px]">

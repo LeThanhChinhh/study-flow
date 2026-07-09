@@ -13,4 +13,6 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, UUID> {
     List<TimeSlot> findByUserIdOrderByDayOfWeekAscStartTimeAsc(UUID userId);
 
     Optional<TimeSlot> findByIdAndUserId(UUID id, UUID userId);
+
+    List<TimeSlot> findByUserIdAndDayOfWeek(UUID userId, Integer dayOfWeek);
 }

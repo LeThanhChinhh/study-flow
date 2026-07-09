@@ -3,11 +3,16 @@ package com.studyflow.core.services;
 import com.studyflow.core.dtos.tasks.CreateTaskRequest;
 import com.studyflow.core.dtos.tasks.TaskResponse;
 import com.studyflow.core.dtos.tasks.UpdateTaskRequest;
+import com.studyflow.core.entities.Goal;
 import com.studyflow.core.entities.LearningModule;
 import com.studyflow.core.entities.Task;
+import com.studyflow.core.entities.TimeSlot;
+import com.studyflow.core.exceptions.ConflictException;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
+import com.studyflow.core.repositories.GoalRepository;
 import com.studyflow.core.repositories.LearningModuleRepository;
 import com.studyflow.core.repositories.TaskRepository;
+import com.studyflow.core.repositories.TimeSlotRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +37,23 @@ public class TaskService {
     private final LearningModuleRepository learningModuleRepository;
     private final GoalService goalService;
     private final CurrentUserService currentUserService;
+    private final GoalRepository goalRepository;
+    private final TimeSlotRepository timeSlotRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             LearningModuleRepository learningModuleRepository,
             GoalService goalService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            GoalRepository goalRepository,
+            TimeSlotRepository timeSlotRepository
     ) {
         this.taskRepository = taskRepository;
         this.learningModuleRepository = learningModuleRepository;
         this.goalService = goalService;
         this.currentUserService = currentUserService;
+        this.goalRepository = goalRepository;
+        this.timeSlotRepository = timeSlotRepository;
     }
 
     @Transactional
@@ -119,6 +130,7 @@ public class TaskService {
     @Transactional
     public TaskResponse updateTask(UUID taskId, UpdateTaskRequest request, Authentication authentication) {
         Task task = findOwnedTask(taskId, authentication);
+        UUID userId = currentUserService.getCurrentUserId(authentication);
 
         if (request.title() != null) {
             if (request.title().isBlank()) {
@@ -127,16 +139,28 @@ public class TaskService {
             task.setTitle(request.title().trim());
         }
 
+        // Determine candidate schedule values (merge request with current task values)
+        LocalDate candidateDate  = request.scheduledDate() != null ? request.scheduledDate() : task.getScheduledDate();
+        LocalTime candidateStart = request.startTime()     != null ? request.startTime()     : task.getStartTime();
+        LocalTime candidateEnd   = request.endTime()       != null ? request.endTime()       : task.getEndTime();
+
+        // Validate time range (start before end)
+        if (candidateStart != null && candidateEnd != null) {
+            validateTimeRange(candidateStart, candidateEnd);
+        }
+
+        // Only run schedule validation when at least one schedule field is present in the request
+        boolean hasScheduleField = request.scheduledDate() != null
+                || request.startTime() != null
+                || request.endTime() != null;
+
+        if (hasScheduleField) {
+            validateScheduleMove(task, userId, candidateDate, candidateStart, candidateEnd);
+        }
+
         if (request.scheduledDate() != null) {
             task.setScheduledDate(request.scheduledDate());
         }
-
-        LocalTime startTime = request.startTime() != null ? request.startTime() : task.getStartTime();
-        LocalTime endTime = request.endTime() != null ? request.endTime() : task.getEndTime();
-        if (startTime != null && endTime != null) {
-            validateTimeRange(startTime, endTime);
-        }
-
         if (request.startTime() != null) {
             task.setStartTime(request.startTime());
         }
@@ -168,6 +192,64 @@ public class TaskService {
         UUID userId = currentUserService.getCurrentUserId(authentication);
         return taskRepository.findByIdAndUserId(taskId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+    }
+
+    /**
+     * Validate that moving a task to (candidateDate, candidateStart, candidateEnd) is legal.
+     * Only called when at least one schedule field is present in the update request.
+     */
+    private void validateScheduleMove(
+            Task task,
+            UUID userId,
+            LocalDate candidateDate,
+            LocalTime candidateStart,
+            LocalTime candidateEnd
+    ) {
+        // 1. scheduledDate requires both startTime and endTime
+        if (candidateDate != null && (candidateStart == null || candidateEnd == null)) {
+            throw new IllegalArgumentException(
+                    "scheduledDate requires both startTime and endTime.");
+        }
+
+        // If there's nothing to validate further, stop early
+        if (candidateDate == null || candidateStart == null || candidateEnd == null) {
+            return;
+        }
+
+        // 2. Goal date range
+        if (task.getGoalId() != null) {
+            Goal goal = goalRepository.findById(task.getGoalId()).orElse(null);
+            if (goal != null) {
+                if (candidateDate.isBefore(goal.getStartDate())) {
+                    throw new IllegalArgumentException(
+                            "Task must stay within the goal date range.");
+                }
+                if (candidateDate.isAfter(goal.getDeadline())) {
+                    throw new IllegalArgumentException(
+                            "Task must stay within the goal date range.");
+                }
+            }
+        }
+
+        // 3. Time slot validation
+        // dayOfWeek: ISO-8601 — Monday=1 … Sunday=7 (matches ScheduleService convention)
+        int dayOfWeek = candidateDate.getDayOfWeek().getValue();
+        List<TimeSlot> slots = timeSlotRepository.findByUserIdAndDayOfWeek(userId, dayOfWeek);
+        boolean fitsInSlot = slots.stream().anyMatch(slot ->
+                !slot.getStartTime().isAfter(candidateStart)
+                        && !slot.getEndTime().isBefore(candidateEnd)
+        );
+        if (!fitsInSlot) {
+            throw new ConflictException(
+                    "This task must fit within one of your available time slots.");
+        }
+
+        // 4. Overlap validation
+        List<Task> overlapping = taskRepository.findOverlappingTasks(
+                userId, candidateDate, task.getId(), candidateStart, candidateEnd);
+        if (!overlapping.isEmpty()) {
+            throw new ConflictException("This time overlaps with another task.");
+        }
     }
 
     private void validateTimeRange(LocalTime startTime, LocalTime endTime) {
