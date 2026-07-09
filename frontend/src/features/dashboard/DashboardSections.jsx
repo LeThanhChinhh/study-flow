@@ -592,10 +592,16 @@ export const LearningProgressCard = ({ user, tasks = [], todayTasks = [], onCrea
 /* Quick Actions bar */
 const QUICK_ACTIONS = [
   {
+    id:  'qa-goals',
+    icon: 'target',
+    label: 'My Goals',
+    cls: 'bg-violet-50 text-violet-700 border-violet-100/80 hover:bg-violet-100 hover:border-violet-200',
+  },
+  {
     id:  'qa-upload',
     icon: 'upload',
     label: 'Upload PDF',
-    cls: 'bg-violet-50 text-violet-700 border-violet-100/80 hover:bg-violet-100 hover:border-violet-200',
+    cls: 'bg-white/80 text-stone-600 border-stone-100 hover:bg-white hover:border-stone-200',
   },
   {
     id:  'qa-kanban',
@@ -617,7 +623,7 @@ const QUICK_ACTIONS = [
   },
 ]
 
-export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onEditAvailability, onViewSchedule }) => (
+export const QuickActionsBar = ({ onOpenGoals, onUploadPdf, onOpenWorkspace, onEditAvailability, onViewSchedule }) => (
   <section aria-label="Quick actions" className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
     <h2 className="label-overline mb-3">Quick Actions</h2>
     <div className="flex flex-wrap gap-2.5">
@@ -626,6 +632,7 @@ export const QuickActionsBar = ({ onUploadPdf, onOpenWorkspace, onEditAvailabili
           key={a.id}
           id={a.id}
           onClick={
+            a.id === 'qa-goals' ? onOpenGoals :
             a.id === 'qa-upload' ? onUploadPdf :
             a.id === 'qa-kanban' ? onOpenWorkspace :
             a.id === 'qa-availability' ? onEditAvailability :
