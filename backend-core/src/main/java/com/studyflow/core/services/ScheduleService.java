@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 public class ScheduleService {
@@ -74,7 +75,11 @@ public class ScheduleService {
             throw new ConflictException("Schedule has already been generated for this goal.");
         }
 
-        PlanningAiResult planningResult = planningAiResultNormalizer.normalize(material.getRawJson());
+        Map<String, Object> sourceData =  request.planningData() != null && !request.planningData().isEmpty()
+                ? request.planningData()
+                : material.getRawJson();
+
+        PlanningAiResult planningResult = planningAiResultNormalizer.normalize(sourceData);
         List<PlanningModule> parsedModules = planningResult.modules();
         
         List<TimeSlot> timeSlots = timeSlotRepository.findByUserIdOrderByDayOfWeekAscStartTimeAsc(userId);

@@ -85,7 +85,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick }) => {
       </div>
 
       {/* Task list */}
-      <div className="flex flex-col gap-1.5 p-2 flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex flex-col gap-1.5 p-2 flex-1 overflow-y-auto calendar-day-scroll">
         {sorted.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <span className="text-[10px] text-stone-200 select-none">—</span>

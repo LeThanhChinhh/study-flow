@@ -1,17 +1,19 @@
 /**
  * CalendarPage.jsx
  *
- * Read-only weekly calendar. Fetches tasks from getTasks() and renders
- * them in a 7-column week grid. Clicking a task card navigates to /focus.
+ * Weekly calendar. Fetches tasks from getTasks() and renders them in a
+ * 7-column week grid. Clicking a task card opens CalendarTaskDetailModal
+ * where the user can view details, change status, or start a focus session.
  *
  * State:
- *   weekAnchor   — any date within the displayed week; used to derive weekDays
- *   tasks        — raw tasks from API
- *   isLoading    — fetch in progress
- *   error        — fetch error message
+ *   weekAnchor    — any date within the displayed week; used to derive weekDays
+ *   tasks         — raw tasks from API
+ *   isLoading     — fetch in progress
+ *   error         — fetch error message
+ *   selectedTask  — task currently shown in the detail modal (null = closed)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
 import {
@@ -30,6 +32,7 @@ import {
 } from '../features/calendar/calendarUtils'
 import StudyIcon from '../components/StudyIcon'
 import { getTasks } from '../api/taskApi'
+import CalendarTaskDetailModal from '../features/calendar/CalendarTaskDetailModal'
 
 /* ─── CalendarPage ──────────────────────────────────────────────────────── */
 
@@ -41,6 +44,7 @@ const CalendarPage = () => {
   const [tasks,      setTasks]      = useState([])
   const [isLoading,  setIsLoading]  = useState(true)
   const [error,      setError]      = useState(null)
+  const [selectedTask, setSelectedTask] = useState(null)
 
   /* ── Data fetching ───────────────────────────────────────────────────── */
 
@@ -64,16 +68,18 @@ const CalendarPage = () => {
 
   /* ── Derived data ────────────────────────────────────────────────────── */
 
-  const weekDays    = getWeekDays(weekAnchor)
+  const weekDays    = useMemo(() => getWeekDays(weekAnchor), [weekAnchor])
   const weekStart   = weekDays[0]
-  const todayStr    = formatLocalDate(new Date())
-  const { byDate, unscheduled } = groupTasksByDate(tasks)
+  const todayStr    = useMemo(() => formatLocalDate(new Date()), [])
+  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(tasks), [tasks])
 
   // Count tasks that fall in the current week view
-  const weekTaskCount = weekDays.reduce((sum, d) => {
-    const ds = formatLocalDate(d)
-    return sum + (byDate[ds]?.length ?? 0)
-  }, 0)
+  const weekTaskCount = useMemo(() => {
+    return weekDays.reduce((sum, d) => {
+      const ds = formatLocalDate(d)
+      return sum + (byDate[ds]?.length ?? 0)
+    }, 0)
+  }, [weekDays, byDate])
 
   /* ── Navigation handlers ─────────────────────────────────────────────── */
 
@@ -81,12 +87,28 @@ const CalendarPage = () => {
   const goToNextWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), 7))
   const goToToday    = () => setWeekAnchor(new Date())
 
-  /* ── Task click ──────────────────────────────────────────────────────── */
+  /* ── Task click → open detail modal ─────────────────────────────────── */
 
   const handleTaskClick = (task) => {
-    if (task.id) {
-      navigate(`/focus?taskId=${task.id}`)
-    }
+    setSelectedTask(task)
+  }
+
+  /* ── Task updated (status change from modal) ─────────────────────────── */
+
+  const handleTaskUpdated = (updatedTask) => {
+    let mergedTask = updatedTask
+
+    setTasks(prev =>
+      prev.map(t => {
+        if (t.id !== updatedTask.id) return t
+        mergedTask = { ...t, ...updatedTask }
+        return mergedTask
+      })
+    )
+
+    setSelectedTask(prev =>
+      prev && prev.id === updatedTask.id ? { ...prev, ...updatedTask } : mergedTask
+    )
   }
 
   /* ── Render helpers ──────────────────────────────────────────────────── */
@@ -247,6 +269,13 @@ const CalendarPage = () => {
           <p className="text-xs text-stone-300">v0.1.0</p>
         </div>
       </footer>
+      {/* ── Task Detail Modal ── */}
+      <CalendarTaskDetailModal
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onTaskUpdated={handleTaskUpdated}
+      />
+
     </div>
   )
 }
