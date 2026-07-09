@@ -93,7 +93,7 @@ public class GeminiPlanningAiClient implements PlanningAiClient {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            ResponseEntity<Map<?, ?>> response = postForMap(url, entity);
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new InvalidAiPlanningResultException("Gemini API returned an error or empty response. Status: " + response.getStatusCode());
             }
@@ -110,29 +110,37 @@ public class GeminiPlanningAiClient implements PlanningAiClient {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private String extractTextFromResponse(Map<String, Object> responseBody) {
+    private String extractTextFromResponse(Map<?, ?> responseBody) {
         try {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-            if (candidates == null || candidates.isEmpty()) return null;
+            Object candidatesObj = responseBody.get("candidates");
+            if (!(candidatesObj instanceof List<?> candidates) || candidates.isEmpty()) return null;
 
-            Map<String, Object> firstCandidate = candidates.get(0);
-            Map<String, Object> content = (Map<String, Object>) firstCandidate.get("content");
-            if (content == null) return null;
+            Object firstCandidateObj = candidates.get(0);
+            if (!(firstCandidateObj instanceof Map<?, ?> firstCandidate)) return null;
 
-            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-            if (parts == null || parts.isEmpty()) return null;
+            Object contentObj = firstCandidate.get("content");
+            if (!(contentObj instanceof Map<?, ?> content)) return null;
+
+            Object partsObj = content.get("parts");
+            if (!(partsObj instanceof List<?> parts) || parts.isEmpty()) return null;
 
             StringBuilder sb = new StringBuilder();
-            for (Map<String, Object> part : parts) {
-                String text = (String) part.get("text");
-                if (text != null) {
-                    sb.append(text);
+            for (Object partObj : parts) {
+                if (partObj instanceof Map<?, ?> part) {
+                    Object textObj = part.get("text");
+                    if (textObj instanceof String text) {
+                        sb.append(text);
+                    }
                 }
             }
             return sb.toString();
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private ResponseEntity<Map<?, ?>> postForMap(String url, HttpEntity<?> entity) {
+        return (ResponseEntity) restTemplate.postForEntity(url, entity, Map.class);
     }
 }

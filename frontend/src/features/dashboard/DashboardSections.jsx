@@ -132,13 +132,13 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
   return (
     <section
       aria-label="Today's learning flow"
-      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden"
+      className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden min-h-[420px] lg:h-[420px]"
     >
       {/* Subtle inner highlight */}
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent" />
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between shrink-0">
         <div className="flex items-center gap-3">
           <IconBadge name="book-open" bg="bg-violet-100" icon="text-violet-600" badgeSize="w-9 h-9" />
           <div>
@@ -157,11 +157,11 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
       </div>
 
       {/* States */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
 
         {/* Loading skeleton */}
         {isLoading && (
-          <div className="space-y-4 py-2 my-auto">
+          <div className="space-y-4 flex-1 flex flex-col justify-center">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex gap-3">
                 <div className="w-5 h-5 rounded-full bg-stone-100 shrink-0 mt-0.5 animate-pulse" />
@@ -176,7 +176,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Error state */}
         {!isLoading && error && (
-          <div className="flex flex-col items-center justify-center py-6 text-center gap-3 my-auto">
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
               <StudyIcon name="alert-circle" size={20} className="text-red-400" />
             </div>
@@ -199,19 +199,19 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Global empty state — no tasks ever created */}
         {!isLoading && !error && !hasAnyTasks && (
-          <div className="flex flex-col items-center justify-center py-8 text-center gap-3 my-auto">
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center">
               <StudyIcon name="book-open" size={22} className="text-violet-400" />
             </div>
             <div>
               <p className="text-sm font-semibold text-stone-700 mb-1">No learning tasks yet.</p>
-              <p className="text-xs text-stone-400 max-w-[200px]">Create a learning plan to get started.</p>
+              <p className="text-xs text-stone-400 max-w-[200px] mx-auto">Create a learning plan to get started.</p>
             </div>
             {onCreatePlan && (
               <button
                 id="today-flow-create-plan-btn"
                 onClick={onCreatePlan}
-                className="btn-accent text-xs px-4 py-2"
+                className="btn-accent text-xs px-4 py-2 mt-2"
               >
                 <StudyIcon name="plus" size={12} strokeWidth={2.5} />
                 Create a learning plan
@@ -222,8 +222,8 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Today empty, but has upcoming */}
         {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length > 0 && (
-          <div className="flex flex-col w-full my-auto">
-            <div className="flex flex-col items-center justify-center py-4 text-center mb-2">
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="flex flex-col items-center justify-center py-2 text-center mb-4">
               <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
               <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
             </div>
@@ -245,15 +245,15 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                       onClick={() => !isDone && onTaskClick?.(task.id)}
                       aria-disabled={isDone}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm font-medium leading-snug ${isDone ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <p className={`text-sm font-medium leading-snug truncate ${isDone ? 'line-through text-stone-400' : 'text-stone-700'}`}>
                           {task.title}
                         </p>
                         {isDone && (
                           <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
                         )}
                       </div>
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-stone-400 truncate">
                         {task.scheduledDate} {task.startTime ? `· ${task.startTime}` : ''}
                       </p>
                     </li>
@@ -266,12 +266,12 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Today empty, no upcoming either (but tasks exist on other days) */}
         {!isLoading && !error && hasAnyTasks && tasks.length === 0 && upcomingTasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-6 text-center my-auto">
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
             {hasIncompleteTasks ? (
               <>
                 <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
                 <p className="text-sm font-semibold text-stone-700 mb-1">No tasks scheduled for today.</p>
-                <p className="text-xs text-stone-400">You still have unfinished tasks. Review your schedule or create a new plan.</p>
+                <p className="text-xs text-stone-400 max-w-[220px]">You still have unfinished tasks. Review your schedule or create a new plan.</p>
               </>
             ) : (
               <>
@@ -285,7 +285,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
         {/* Task list */}
         {!isLoading && !error && tasks.length > 0 && (
-          <div className="max-h-[520px] overflow-y-auto custom-scrollbar pr-2 -mr-2">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar today-flow-scroll pr-2 min-h-0">
             <ul className="space-y-0" role="list">
             {tasks.map((task, idx) => {
               const isLast = idx === tasks.length - 1
@@ -306,42 +306,45 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                   </div>
 
                   {/* Row content */}
-                  <div className={`task-row flex-1 ${isLast ? 'pb-0' : 'pb-3'}`}>
+                  <div className={`task-row flex-1 min-w-0 ${isLast ? 'pb-0' : 'pb-3'}`}>
                     <div
-                      className={`task-row-inner flex-1 transition-colors rounded-xl px-3 py-2 -mx-3 -my-2 ${
+                      className={`task-row-inner flex-1 transition-colors rounded-xl px-2 py-2 -my-1 min-w-0 ${
                         task.status === 'active' ? 'is-active' :
                         isDone ? '' :
                         'group-hover:bg-stone-50/80'
                       }`}
                     >
-                      <div className="min-w-0">
-                        <p 
-                          className={`text-sm leading-snug truncate ${
-                            isDone             ? 'line-through text-stone-400' :
-                            task.status === 'active' ? 'text-violet-700 font-semibold' :
-                            'text-stone-700 font-medium'
-                          }`}
-                          title={task.title}
-                        >
-                          {task.title}
-                        </p>
-                        <p className="text-xs text-stone-400 mt-0.5 truncate" title={task.module}>
-                          {task.module}
-                          {task.mins ? ` · ${task.mins} min` : ''}
-                          {task.startTime ? ` · ${task.startTime}` : ''}
-                        </p>
+                      <div className="min-w-0 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p 
+                            className={`text-sm leading-snug truncate ${
+                              isDone             ? 'line-through text-stone-400' :
+                              task.status === 'active' ? 'text-violet-700 font-semibold' :
+                              'text-stone-700 font-medium'
+                            }`}
+                            title={task.title}
+                          >
+                            {task.title}
+                          </p>
+                          <p className="text-xs text-stone-400 mt-0.5 truncate" title={task.module}>
+                            {task.module}
+                            {task.mins ? ` · ${task.mins} min` : ''}
+                            {task.startTime ? ` · ${task.startTime}` : ''}
+                          </p>
+                        </div>
+                        {/* Status badges */}
+                        <div className="shrink-0 mt-0.5">
+                          {task.status === 'active' && (
+                            <span className="badge bg-violet-100 text-violet-600">In progress</span>
+                          )}
+                          {isDone && (
+                            <span className="badge bg-emerald-100 text-emerald-600">Done</span>
+                          )}
+                          {task.status === 'pending' && (
+                            <span className="badge bg-stone-100 text-stone-400">Pending</span>
+                          )}
+                        </div>
                       </div>
-
-                      {/* Status badges */}
-                      {task.status === 'active' && (
-                        <span className="badge bg-violet-100 text-violet-600 shrink-0">In progress</span>
-                      )}
-                      {isDone && (
-                        <span className="badge bg-emerald-100 text-emerald-600 shrink-0">Done</span>
-                      )}
-                      {task.status === 'pending' && (
-                        <span className="badge bg-stone-100 text-stone-400 shrink-0">Pending</span>
-                      )}
                     </div>
                   </div>
                 </li>
@@ -354,7 +357,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
 
       {/* Progress bar — only when tasks exist */}
       {!isLoading && !error && tasks.length > 0 && (
-        <div className="mt-auto pt-5">
+        <div className="pt-3 border-t border-stone-100/50 shrink-0">
           <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full progress-fill transition-all duration-500"
@@ -415,7 +418,7 @@ export const PomodoroRing = () => {
 export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => (
   <section
     aria-label="Focus session"
-    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden"
+    className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden min-h-[420px] lg:h-[420px]"
   >
     {/* Ambient rose tint at bottom */}
     <div

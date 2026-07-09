@@ -229,3 +229,26 @@
 .progress-fill {
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Today Flow Custom Scrollbar */
+.today-flow-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 162, 158, 0.35) transparent;
+}
+
+.today-flow-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.today-flow-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.today-flow-scroll::-webkit-scrollbar-thumb {
+  background: rgba(168, 162, 158, 0.28);
+  border-radius: 999px;
+}
+
+.today-flow-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
