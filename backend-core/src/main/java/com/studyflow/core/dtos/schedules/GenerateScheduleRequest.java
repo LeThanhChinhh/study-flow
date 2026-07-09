@@ -2,6 +2,7 @@ package com.studyflow.core.dtos.schedules;
 
 import jakarta.validation.constraints.NotNull;
 
+import java.util.Map;
 import java.util.UUID;
 
 public record GenerateScheduleRequest(
@@ -9,6 +10,8 @@ public record GenerateScheduleRequest(
         UUID goalId,
 
         @NotNull(message = "Material id is required")
-        UUID materialId
+        UUID materialId,
+
+        Map<String, Object> planningData
 ) {
 }

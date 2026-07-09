@@ -22,6 +22,7 @@ import {
   getSuggestedDayOfWeekForGoal,
   clonePlan,
   validateEditablePlan,
+  buildPlanningDataPayload,
 } from '../features/planning/planningUtils'
 import PlanningStepper from '../features/planning/PlanningStepper'
 import StepContent from '../features/planning/PlanningSteps'
@@ -41,9 +42,8 @@ const PlanningPage = () => {
   const [parsedMaterial, setParsedMaterial] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-
-  // Local editable plan — initialised from parsedMaterial.rawJson once AI parsing completes.
-  // TODO(next-commit): pass editablePlan (as editedRawJson) to generateSchedule instead of relying solely on materialId.
+  
+// Local editable plan — initialised from parsedMaterial.rawJson once AI parsing completes.
   const [editablePlan, setEditablePlan] = useState(null)
   // Inline validation errors for the editable plan (shown in EditablePlanStep without alert()).
   const [planErrors, setPlanErrors] = useState([])
@@ -186,11 +186,10 @@ const PlanningPage = () => {
         }
         setPlanErrors([])
 
-        // TODO(next-commit): pass editablePlan (editedRawJson) to generateSchedule so the
-        // backend uses the user-edited modules/tasks instead of re-parsing from materialId.
-        // For now we still call the original API signature (goalId + materialId only).
+        const planningData = buildPlanningDataPayload(editablePlan)
+
         try {
-          await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id })
+          await generateSchedule({ goalId: createdGoal.id, materialId: parsedMaterial.id, planningData })
           navigate('/dashboard')
         } catch (err) {
           const errMsg = err?.data?.message || err?.message || ''

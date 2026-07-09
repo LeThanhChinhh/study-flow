@@ -152,3 +152,15 @@ export const validateEditablePlan = (plan) => {
   })
   return errors
 }
+
+export const buildPlanningDataPayload = (plan) => ({
+  modules: plan.modules.map((mod, mIdx) => ({
+    title: mod.title.trim(),
+    orderIndex: mIdx,
+    tasks: mod.tasks.map((task, tIdx) => ({
+      title: task.title.trim(),
+      estimatedMinutes: Number(task.estimatedMinutes),
+      orderIndex: tIdx,
+    })),
+  })),
+})
