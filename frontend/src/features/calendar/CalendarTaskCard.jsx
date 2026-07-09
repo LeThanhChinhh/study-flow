@@ -1,3 +1,4 @@
+import React from 'react'
 import StudyIcon from '../../components/StudyIcon'
 import { formatTime } from './calendarUtils'
 
@@ -40,7 +41,7 @@ const getStatusConfig = (status) =>
  * @param {Object}   task          - Raw task object from API
  * @param {Function} onClick       - Called with task when user clicks the card
  */
-const CalendarTaskCard = ({ task, onClick }) => {
+const CalendarTaskCard = React.memo(({ task, onClick }) => {
   const cfg       = getStatusConfig(task.status)
   const isClickable = Boolean(task.id)
 
@@ -59,7 +60,7 @@ const CalendarTaskCard = ({ task, onClick }) => {
       }}
       disabled={!isClickable}
       className={[
-        'w-full text-left px-2.5 py-2 rounded-lg border overflow-hidden',
+        'w-full text-left rounded-lg border overflow-hidden px-2.5 py-2 shrink-0',
         'transition-all duration-150',
         isClickable ? 'cursor-pointer' : 'cursor-default',
         'focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1',
@@ -72,7 +73,7 @@ const CalendarTaskCard = ({ task, onClick }) => {
         <div className="flex items-start gap-1.5 min-w-0 w-full">
           {/* Status dot */}
           <span
-            className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[5px] ${cfg.dot}`}
+            className={`w-1.5 h-1.5 rounded-full mt-[5px] shrink-0 ${cfg.dot}`}
             aria-hidden="true"
           />
           <p 
@@ -110,6 +111,6 @@ const CalendarTaskCard = ({ task, onClick }) => {
       </div>
     </button>
   )
-}
+})
 
 export default CalendarTaskCard

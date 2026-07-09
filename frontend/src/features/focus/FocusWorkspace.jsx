@@ -11,6 +11,19 @@ import { CurrentTaskPanel, SupportPanel } from './FocusPanels'
 import QuizModal from './QuizModal'
 import { POMODORO_SECONDS } from './focusData'
 
+const calculateDurationSeconds = (startTime, endTime) => {
+  if (!startTime || !endTime) return POMODORO_SECONDS
+  try {
+    const [h1, m1] = startTime.split(':').map(Number)
+    const [h2, m2] = endTime.split(':').map(Number)
+    let diffMins = (h2 * 60 + m2) - (h1 * 60 + m1)
+    if (diffMins < 0) diffMins += 24 * 60
+    return diffMins > 0 ? diffMins * 60 : POMODORO_SECONDS
+  } catch (e) {
+    return POMODORO_SECONDS
+  }
+}
+
 // Timer status values: 'ready' | 'focusing' | 'paused' | 'complete'
 
 // Entrance animation variants for the main content wrapper
@@ -83,9 +96,25 @@ const FocusWorkspace = () => {
 
 
   // Timer state
-  const [secondsLeft, setSecondsLeft] = useState(POMODORO_SECONDS)
-  const [status, setStatus]           = useState('ready')
+  const [sessionSeconds, setSessionSeconds] = useState(POMODORO_SECONDS)
+  const [secondsLeft, setSecondsLeft]       = useState(POMODORO_SECONDS)
+  const [status, setStatus]                 = useState('ready')
   const intervalRef = useRef(null)
+
+  // When task loads/changes, update session timer
+  useEffect(() => {
+    if (currentTask) {
+      const secs = calculateDurationSeconds(currentTask.startTime, currentTask.endTime)
+      setSessionSeconds(secs)
+      setSecondsLeft(secs)
+      setStatus('ready')
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      hasHandledCompletionRef.current = false
+    }
+  }, [currentTask])
 
   // Clear any running interval
   const clearTick = useCallback(() => {
@@ -131,7 +160,7 @@ const FocusWorkspace = () => {
 
   const handleReset = () => {
     clearTick()
-    setSecondsLeft(POMODORO_SECONDS)
+    setSecondsLeft(sessionSeconds)
     setStatus('ready')
     hasHandledCompletionRef.current = false
   }
@@ -152,7 +181,7 @@ const FocusWorkspace = () => {
       // 1. Save Pomodoro Log
       await savePomodoroLog({
         taskId: currentTask.id,
-        focusMinutes: Math.max(1, Math.round(POMODORO_SECONDS / 60))
+        focusMinutes: Math.max(1, Math.round(sessionSeconds / 60))
       })
 
       // 2. Generate Quiz
@@ -276,6 +305,7 @@ const FocusWorkspace = () => {
             className="flex flex-col items-center justify-start gap-4"
           >
             <FocusTimer
+              sessionSeconds={sessionSeconds}
               secondsLeft={secondsLeft}
               status={status}
               onStart={handleStart}

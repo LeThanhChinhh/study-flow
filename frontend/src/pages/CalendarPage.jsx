@@ -13,7 +13,7 @@
  *   selectedTask  — task currently shown in the detail modal (null = closed)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
 import {
@@ -68,16 +68,18 @@ const CalendarPage = () => {
 
   /* ── Derived data ────────────────────────────────────────────────────── */
 
-  const weekDays    = getWeekDays(weekAnchor)
+  const weekDays    = useMemo(() => getWeekDays(weekAnchor), [weekAnchor])
   const weekStart   = weekDays[0]
-  const todayStr    = formatLocalDate(new Date())
-  const { byDate, unscheduled } = groupTasksByDate(tasks)
+  const todayStr    = useMemo(() => formatLocalDate(new Date()), [])
+  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(tasks), [tasks])
 
   // Count tasks that fall in the current week view
-  const weekTaskCount = weekDays.reduce((sum, d) => {
-    const ds = formatLocalDate(d)
-    return sum + (byDate[ds]?.length ?? 0)
-  }, 0)
+  const weekTaskCount = useMemo(() => {
+    return weekDays.reduce((sum, d) => {
+      const ds = formatLocalDate(d)
+      return sum + (byDate[ds]?.length ?? 0)
+    }, 0)
+  }, [weekDays, byDate])
 
   /* ── Navigation handlers ─────────────────────────────────────────────── */
 

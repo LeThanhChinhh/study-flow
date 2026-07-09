@@ -31,8 +31,8 @@ const STATUS_RING_COLOR = {
 }
 
 // FocusTimer owns the countdown state and exposes control handlers
-const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, onComplete, disabled, isCompletingSession }) => {
-  const progress = secondsLeft / POMODORO_SECONDS
+const FocusTimer = ({ sessionSeconds = 1500, secondsLeft, status, onStart, onPause, onResume, onReset, onComplete, disabled, isCompletingSession }) => {
+  const progress = secondsLeft / sessionSeconds
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress)
   const isFocusing = status === 'focusing'
   const isComplete = status === 'complete'
@@ -259,7 +259,7 @@ const FocusTimer = ({ secondsLeft, status, onStart, onPause, onResume, onReset, 
 
       {/* Pomodoro label */}
       <p className="text-xs text-stone-400 -mt-4">
-        Pomodoro · {Math.max(1, Math.round(POMODORO_SECONDS / 60))} min session
+        Pomodoro · {Math.max(1, Math.round(sessionSeconds / 60))} min session
       </p>
     </div>
   )

@@ -198,25 +198,27 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
     <>
       {/* ── Overlay ── */}
       <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] animate-fade-in"
+        className="fixed inset-0 z-40 bg-black/30"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* ── Modal panel ── */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="task-detail-title"
-        className="fixed z-50 inset-x-4 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[440px] max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl border border-stone-100 animate-slide-up"
-      >
-        {/* Top drag-hint bar (mobile) */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-stone-200 rounded-full" />
-        </div>
+      {/* ── Centered Modal Wrapper ── */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        {/* ── Modal panel ── */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-detail-title"
+          className="pointer-events-auto w-full max-w-[440px] max-h-[88vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-stone-100"
+        >
+          {/* Top drag-hint bar (mobile) */}
+          <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 bg-stone-200 rounded-full" />
+          </div>
 
         {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3 border-b border-stone-100">
+        <div className="flex items-start justify-between gap-3 px-5 pt-3 pb-2 border-b border-stone-100 shrink-0">
           <div className="flex-1 min-w-0">
             {/* Status badge */}
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2 ${cfg.badge}`}>
@@ -254,8 +256,10 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
           </button>
         </div>
 
-        {/* ── Quick edit: schedule ── */}
-        <div className="px-5 pt-4 pb-3 border-b border-stone-100 space-y-3">
+        {/* ── Scrollable Body ── */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {/* ── Quick edit: schedule ── */}
+          <div className="px-5 pt-3 pb-3 border-b border-stone-100 space-y-3">
           <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
             Schedule
           </p>
@@ -372,69 +376,71 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
           </div>
         </div>
 
-        {/* ── Status error ── */}
-        {actionError && (
-          <div className="mx-5 mt-3 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600 flex items-center gap-1.5">
-            <StudyIcon name="alert-circle" size={12} className="text-red-400 shrink-0" />
-            {actionError}
-          </div>
-        )}
-
-        {/* ── Actions ── */}
-        <div className="px-5 pt-4 pb-5 space-y-3">
-
-          {/* Start Focus */}
-          {task.id && (
-            <button
-              type="button"
-              onClick={handleStartFocus}
-              className="w-full btn-accent justify-center py-2.5 text-sm"
-              disabled={isAnyBusy}
-            >
-              <StudyIcon name="zap" size={14} strokeWidth={2.5} />
-              Start Focus Session
-            </button>
+          {/* ── Status error ── */}
+          {actionError && (
+            <div className="mx-5 mt-3 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600 flex items-center gap-1.5">
+              <StudyIcon name="alert-circle" size={12} className="text-red-400 shrink-0" />
+              {actionError}
+            </div>
           )}
 
-          {/* Status quick buttons */}
-          <div>
-            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">
-              Status
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { status: 'PENDING',     icon: 'clock', label: 'Pending',     active: 'bg-violet-50 text-violet-700 border-violet-200 ring-1 ring-violet-200' },
-                { status: 'IN_PROGRESS', icon: 'zap',   label: 'In Progress', active: 'bg-violet-100 text-violet-800 border-violet-300 ring-1 ring-violet-300' },
-                { status: 'COMPLETED',   icon: 'check',  label: 'Done',        active: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-200' },
-              ].map(({ status, icon, label, active }) => {
-                const isCurrent      = task.status === status
-                const isThisLoading  = actionLoading === status
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    disabled={isAnyBusy || !task.id}
-                    onClick={() => handleStatusUpdate(status)}
-                    className={[
-                      'flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border text-[11px] font-semibold transition-all duration-150',
-                      isCurrent
-                        ? active
-                        : 'bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-300 hover:bg-stone-100',
-                      (isAnyBusy && !isThisLoading) ? 'opacity-50 cursor-not-allowed' : '',
-                    ].join(' ')}
-                    aria-pressed={isCurrent}
-                  >
-                    {isThisLoading ? (
-                      <StudyIcon name="timer" size={14} className="animate-spin text-current" />
-                    ) : (
-                      <StudyIcon name={icon} size={14} className="text-current" strokeWidth={isCurrent ? 2.5 : 2} />
-                    )}
-                    {label}
-                  </button>
-                )
-              })}
+          {/* ── Actions ── */}
+          <div className="px-5 pt-3 pb-4 space-y-3">
+
+            {/* Start Focus */}
+            {task.id && (
+              <button
+                type="button"
+                onClick={handleStartFocus}
+                className="w-full btn-accent justify-center py-2.5 text-sm"
+                disabled={isAnyBusy}
+              >
+                <StudyIcon name="zap" size={14} strokeWidth={2.5} />
+                Start Focus Session
+              </button>
+            )}
+
+            {/* Status quick buttons */}
+            <div>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">
+                Status
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { status: 'PENDING',     icon: 'clock', label: 'Pending',     active: 'bg-violet-50 text-violet-700 border-violet-200 ring-1 ring-violet-200' },
+                  { status: 'IN_PROGRESS', icon: 'zap',   label: 'In Progress', active: 'bg-violet-100 text-violet-800 border-violet-300 ring-1 ring-violet-300' },
+                  { status: 'COMPLETED',   icon: 'check',  label: 'Done',        active: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-200' },
+                ].map(({ status, icon, label, active }) => {
+                  const isCurrent      = task.status === status
+                  const isThisLoading  = actionLoading === status
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      disabled={isAnyBusy || !task.id}
+                      onClick={() => handleStatusUpdate(status)}
+                      className={[
+                        'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border text-[11px] font-semibold transition-all duration-150',
+                        isCurrent
+                          ? active
+                          : 'bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-300 hover:bg-stone-100',
+                        (isAnyBusy && !isThisLoading) ? 'opacity-50 cursor-not-allowed' : '',
+                      ].join(' ')}
+                      aria-pressed={isCurrent}
+                    >
+                      {isThisLoading ? (
+                        <StudyIcon name="timer" size={14} className="animate-spin text-current" />
+                      ) : (
+                        <StudyIcon name={icon} size={14} className="text-current" strokeWidth={isCurrent ? 2.5 : 2} />
+                      )}
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </>
