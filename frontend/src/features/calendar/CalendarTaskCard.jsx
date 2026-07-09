@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDraggable } from '@dnd-kit/core'
 import StudyIcon from '../../components/StudyIcon'
 import { formatTime } from './calendarUtils'
 
@@ -40,10 +41,25 @@ const getStatusConfig = (status) =>
  *
  * @param {Object}   task          - Raw task object from API
  * @param {Function} onClick       - Called with task when user clicks the card
+ * @param {boolean}  isMoving      - True when this task is being saved after drop (disables drag)
+ * @param {boolean}  enableDrag    - Opt-in: only DayColumn passes true; UnscheduledSection does not
  */
-const CalendarTaskCard = React.memo(({ task, onClick }) => {
+const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = false }) => {
   const cfg       = getStatusConfig(task.status)
   const isClickable = Boolean(task.id)
+
+  // Only allow drag if: enableDrag=true, id exists, startTime + endTime exist, not currently moving
+  const canDrag = Boolean(enableDrag && task.id && task.startTime && task.endTime && !isMoving)
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+    data: { task },
+    disabled: !canDrag,
+  })
+
+  // When isDragging: show ghost placeholder in original position (DragOverlay handles the floating visual)
+  // When not dragging: no transform needed
+  const style = isDragging ? { opacity: 0.25, pointerEvents: 'none' } : undefined
 
   const timeRange =
     task.startTime && task.endTime
@@ -52,21 +68,29 @@ const CalendarTaskCard = React.memo(({ task, onClick }) => {
       ? formatTime(task.startTime)
       : null
 
+  const handleClick = () => {
+    if (isClickable) onClick?.(task)
+  }
+
   return (
     <button
+      ref={setNodeRef}
       type="button"
-      onClick={() => {
-        if (isClickable) onClick?.(task)
-      }}
+      style={style}
+      onClick={handleClick}
       disabled={!isClickable}
       className={[
         'w-full text-left rounded-lg border overflow-hidden px-2.5 py-2 shrink-0',
         'transition-all duration-150',
         isClickable ? 'cursor-pointer' : 'cursor-default',
+        canDrag ? 'cursor-grab active:cursor-grabbing' : '',
+        isMoving ? 'opacity-50 pointer-events-none' : '',
+        isDragging ? 'opacity-50 ring-2 ring-violet-400' : '',
         'focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1',
         cfg.card,
       ].join(' ')}
       aria-label={`View details for: ${task.title}`}
+      {...(canDrag ? { ...listeners, ...attributes } : {})}
     >
       {/* Title row */}
       <div className="flex flex-col items-start min-w-0 w-full">
@@ -112,5 +136,7 @@ const CalendarTaskCard = React.memo(({ task, onClick }) => {
     </button>
   )
 })
+
+CalendarTaskCard.displayName = 'CalendarTaskCard'
 
 export default CalendarTaskCard

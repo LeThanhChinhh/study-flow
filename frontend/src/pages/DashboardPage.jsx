@@ -11,6 +11,8 @@ import {
   LearningProgressCard,
   QuickActionsBar
 } from '../features/dashboard/DashboardSections'
+import TimeSlotEditorModal from '../features/dashboard/TimeSlotEditorModal'
+import GoalOverviewModal from '../features/dashboard/GoalOverviewModal'
 import { getTasks } from '../api/taskApi'
 
 const formatLocalDate = () => {
@@ -50,6 +52,8 @@ const DashboardPage = () => {
   const [isTasksLoading, setIsTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [showTimeSlotModal, setShowTimeSlotModal] = useState(false)
+  const [showGoalModal, setShowGoalModal] = useState(false)
 
   useEffect(() => {
     const fetchTodayTasks = async () => {
@@ -186,9 +190,10 @@ const DashboardPage = () => {
         </div>
 
         <QuickActionsBar
+          onOpenGoals={() => setShowGoalModal(true)}
           onUploadPdf={handleOpenPlanning}
           onOpenWorkspace={() => navigate('/focus')}
-          onReviewNotes={handleOpenPlanning}
+          onEditAvailability={() => setShowTimeSlotModal(true)}
           onViewSchedule={() => navigate('/calendar')}
         />
       </main>
@@ -199,6 +204,14 @@ const DashboardPage = () => {
           <p className="text-xs text-stone-300">v0.1.0</p>
         </div>
       </footer>
+
+      {showTimeSlotModal && (
+        <TimeSlotEditorModal onClose={() => setShowTimeSlotModal(false)} />
+      )}
+      
+      {showGoalModal && (
+        <GoalOverviewModal onClose={() => setShowGoalModal(false)} />
+      )}
     </div>
   )
 }
