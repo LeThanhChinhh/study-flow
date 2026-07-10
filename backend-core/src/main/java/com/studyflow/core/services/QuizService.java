@@ -17,6 +17,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.studyflow.core.services.ai.GeminiQuizClient;
+import com.studyflow.core.services.ai.QuizAiResultNormalizer;
+import com.studyflow.core.services.ai.QuizAiResultNormalizer.QuizAiResult;
+import com.studyflow.core.services.ai.QuizAiResultNormalizer.QuizQuestion;
+import com.studyflow.core.services.ai.QuizAiResultNormalizer.QuizOptionItem;
+
 @Service
 public class QuizService {
 
@@ -24,19 +30,31 @@ public class QuizService {
     private final QuizOptionRepository quizOptionRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final TaskRepository taskRepository;
+    private final GoalRepository goalRepository;
+    private final LearningModuleRepository learningModuleRepository;
+    private final GeminiQuizClient geminiQuizClient;
+    private final QuizAiResultNormalizer quizAiResultNormalizer;
 
     public QuizService(QuizRepository quizRepository,
                        QuizOptionRepository quizOptionRepository,
                        QuizAttemptRepository quizAttemptRepository,
-                       TaskRepository taskRepository) {
+                       TaskRepository taskRepository,
+                       GoalRepository goalRepository,
+                       LearningModuleRepository learningModuleRepository,
+                       GeminiQuizClient geminiQuizClient,
+                       QuizAiResultNormalizer quizAiResultNormalizer) {
         this.quizRepository = quizRepository;
         this.quizOptionRepository = quizOptionRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.taskRepository = taskRepository;
+        this.goalRepository = goalRepository;
+        this.learningModuleRepository = learningModuleRepository;
+        this.geminiQuizClient = geminiQuizClient;
+        this.quizAiResultNormalizer = quizAiResultNormalizer;
     }
 
     /**
-     * Sinh Mock Quiz cho một Task (2 câu hỏi, mỗi câu 4 lựa chọn)
+     * Sinh Quiz từ Gemini AI cho một Task (2 câu hỏi, mỗi câu 4 lựa chọn)
      */
     @Transactional
     public List<QuizResponse> generateQuiz(UUID taskId) {
@@ -53,31 +71,91 @@ public class QuizService {
                     .toList();
         }
 
+        String goalTitle = "";
+        if (task.getGoalId() != null) {
+            goalTitle = goalRepository.findById(task.getGoalId()).map(Goal::getTitle).orElse("");
+        }
+        
+        String moduleTitle = "";
+        if (task.getModuleId() != null) {
+            moduleTitle = learningModuleRepository.findById(task.getModuleId()).map(LearningModule::getTitle).orElse("");
+        }
+
+        String prompt = buildPrompt(task.getTitle(), moduleTitle, goalTitle);
+
+        Map<String, Object> rawAiResponse = geminiQuizClient.generateQuiz(prompt);
+        QuizAiResult aiResult = quizAiResultNormalizer.normalize(rawAiResponse);
+
         List<QuizResponse> quizDtos = new ArrayList<>();
 
-        for (int i = 1; i <= 2; i++) {
-            String questionText = String.format("Câu hỏi %d về nội dung: %s?", i, task.getTitle());
-
+        for (QuizQuestion q : aiResult.questions()) {
             Quiz quiz = new Quiz();
             quiz.setTask(task);
-            quiz.setQuestionText(questionText);
+            quiz.setQuestionText(q.questionText());
             Quiz savedQuiz = quizRepository.save(quiz);
 
             List<QuizOptionResponse> optionDtos = new ArrayList<>();
-            for (int j = 1; j <= 4; j++) {
+            for (QuizOptionItem opt : q.options()) {
                 QuizOption option = new QuizOption();
                 option.setQuiz(savedQuiz);
-                option.setText("Lựa chọn " + j + " cho câu hỏi " + i);
-                option.setIsCorrect(j == 1); // Giả định lựa chọn đầu tiên luôn đúng [8]
+                option.setText(opt.text());
+                option.setIsCorrect(opt.correct());
                 quizOptionRepository.save(option);
 
                 optionDtos.add(new QuizOptionResponse(option.getId(), option.getText()));
             }
 
-            quizDtos.add(new QuizResponse(savedQuiz.getId(), taskId, questionText, optionDtos));
+            quizDtos.add(new QuizResponse(savedQuiz.getId(), taskId, savedQuiz.getQuestionText(), optionDtos));
         }
 
         return quizDtos;
+    }
+
+    private String buildPrompt(String taskTitle, String moduleTitle, String goalTitle) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You are an expert tutor creating a quiz for a student.\n");
+        sb.append("Based on the following context, generate exactly 2 multiple-choice active recall questions.\n");
+        sb.append("Context:\n");
+        if (!goalTitle.isEmpty()) {
+            sb.append("- Goal: ").append(goalTitle).append("\n");
+        }
+        if (!moduleTitle.isEmpty()) {
+            sb.append("- Module: ").append(moduleTitle).append("\n");
+        }
+        sb.append("- Task: ").append(taskTitle).append("\n\n");
+        
+        sb.append("Requirements:\n");
+        sb.append("1. Generate exactly 2 multiple-choice questions. The questions array must contain exactly 2 question objects.\n");
+        sb.append("2. Each question has exactly 4 options.\n");
+        sb.append("3. Exactly one correct option per question.\n");
+        sb.append("4. Use only the provided context. If context is too short, infer reasonable general knowledge related to the titles, but avoid overly specific fabricated details.\n");
+        sb.append("5. Do not include markdown fences. Return pure JSON only.\n");
+        sb.append("6. Avoid vague questions like 'What did you learn?'. Prefer conceptual understanding.\n\n");
+        
+        sb.append("Output format (JSON):\n");
+        sb.append("{\n");
+        sb.append("  \"questions\": [\n");
+        sb.append("    {\n");
+        sb.append("      \"questionText\": \"...\",\n");
+        sb.append("      \"options\": [\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": true },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false }\n");
+        sb.append("      ]\n");
+        sb.append("    },\n");
+        sb.append("    {\n");
+        sb.append("      \"questionText\": \"...\",\n");
+        sb.append("      \"options\": [\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": true },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false },\n");
+        sb.append("        { \"text\": \"...\", \"isCorrect\": false }\n");
+        sb.append("      ]\n");
+        sb.append("    }\n");
+        sb.append("  ]\n");
+        sb.append("}");
+        return sb.toString();
     }
 
     /**
@@ -171,17 +249,43 @@ public class QuizService {
                 ? (int) Math.round(correctCount * 100.0 / totalQuestions)
                 : 0;
 
+        List<QuestionResultDto> results = new ArrayList<>();
+
         // 3. Lưu mỗi câu trả lời dưới dạng một QuizAttempt riêng biệt [9, 10]
         for (QuizSubmitRequest.AnswerDTO answer : answers) {
             Quiz quizItem = quizzes.stream()
                     .filter(q -> q.getId().equals(answer.quizId()))
                     .findFirst()
                     .orElseThrow();
+                    
+            List<QuizOption> optionsForQuiz = quizOptionRepository.findByQuizId(quizItem.getId());
+            
+            List<QuizOption> correctOptions = optionsForQuiz.stream().filter(opt -> Boolean.TRUE.equals(opt.getIsCorrect())).toList();
+            if (correctOptions.size() != 1) {
+                throw new IllegalStateException("Data error: Quiz must have exactly one correct option.");
+            }
+            UUID correctOptionId = correctOptions.get(0).getId();
+            
+            List<QuizOptionResponse> optionResponses = optionsForQuiz.stream()
+                    .map(opt -> new QuizOptionResponse(opt.getId(), opt.getText()))
+                    .toList();
+            
+            boolean isCorrect = Boolean.TRUE.equals(optionById.get(answer.selectedOptionId()).getIsCorrect());
+            
+            results.add(new QuestionResultDto(
+                quizItem.getId(),
+                quizItem.getQuestionText(),
+                answer.selectedOptionId(),
+                correctOptionId,
+                isCorrect,
+                optionResponses
+            ));
+
             QuizAttempt attempt = new QuizAttempt();
             attempt.setQuiz(quizItem);
             attempt.setUserId(userId);
             attempt.setSelectedOptionId(answer.selectedOptionId());
-            attempt.setIsCorrect(Boolean.TRUE.equals(optionById.get(answer.selectedOptionId()).getIsCorrect()));
+            attempt.setIsCorrect(isCorrect);
             attempt.setAnsweredAt(OffsetDateTime.now());
             quizAttemptRepository.save(attempt);
         }
@@ -194,7 +298,7 @@ public class QuizService {
             completedTask = true;
         }
 
-        return new QuizSubmitResponse(totalQuestions, (int) correctCount, scorePercent, completedTask);
+        return new QuizSubmitResponse(totalQuestions, (int) correctCount, scorePercent, completedTask, results);
     }
 
     private QuizResponse toResponse(Quiz quiz) {

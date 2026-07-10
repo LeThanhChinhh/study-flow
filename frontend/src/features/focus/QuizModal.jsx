@@ -1,41 +1,7 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 
-// ─── Animation variants ──────────────────────────────────────────────────────
-
-const overlayVariants = {
-  hidden:  { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.22 } },
-  exit:    { opacity: 0, transition: { duration: 0.18 } },
-}
-
-const panelVariants = {
-  hidden:  { opacity: 0, y: 32, scale: 0.97 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-  },
-  exit: {
-    opacity: 0,
-    y: 24,
-    scale: 0.97,
-    transition: { duration: 0.2 },
-  },
-}
-
-const itemVariants = {
-  hidden:  { opacity: 0, y: 10 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.07, duration: 0.28, ease: 'easeOut' },
-  }),
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// Sub components
 
 const getQuizId = (quiz) => quiz?.id || quiz?.quizId
 const getOptionId = (option) => option?.id || option?.optionId || option?.selectedOptionId
@@ -47,11 +13,7 @@ const getOptionId = (option) => option?.id || option?.optionId || option?.select
 const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
   const quizId = getQuizId(quiz)
   return (
-    <motion.div
-      custom={index}
-      variants={itemVariants}
-      initial="hidden"
-      animate="visible"
+    <div
       className="relative rounded-2xl border border-stone-200/80 bg-white/70 p-5 flex flex-col gap-4"
       style={{
         backdropFilter: 'blur(8px)',
@@ -114,7 +76,89 @@ const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
           )
         })}
       </div>
-    </motion.div>
+    </div>
+  )
+}
+
+/**
+ * Single quiz question card for reviewing results.
+ */
+const QuizResultQuestion = ({ item, index }) => {
+  const isCorrect = item.isCorrect
+  
+  return (
+    <div
+      className="relative rounded-2xl border border-stone-200/80 bg-white/70 p-5 flex flex-col gap-4"
+      style={{
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className={`absolute inset-x-0 top-0 h-px rounded-t-2xl bg-gradient-to-r from-transparent to-transparent ${isCorrect ? 'via-emerald-300/50' : 'via-rose-300/50'}`}
+      />
+
+      <div className="flex items-start gap-3">
+        <div className={`w-7 h-7 shrink-0 rounded-xl ${isCorrect ? 'bg-emerald-100' : 'bg-rose-100'} flex items-center justify-center`}>
+          <span className={`text-xs font-bold ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>{index + 1}</span>
+        </div>
+        <p className="text-sm font-semibold text-stone-800 leading-snug pt-0.5">
+          {item.questionText}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2 pl-10">
+        {item.options.map((opt) => {
+          const optId = getOptionId(opt)
+          const isSelected = item.selectedOptionId === optId
+          const isCorrectOption = item.correctOptionId === optId
+
+          let stateClasses = "border-stone-200 bg-white/60 text-stone-500 opacity-70"
+          let indicatorBorder = "border-stone-300"
+          let label = null
+
+          if (isCorrectOption) {
+            stateClasses = "border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm"
+            indicatorBorder = "border-emerald-500"
+            if (isSelected) {
+                label = <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-md">Your Answer</span>
+            } else {
+                label = <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-md">Correct Answer</span>
+            }
+          } else if (isSelected && !isCorrectOption) {
+            stateClasses = "border-rose-400 bg-rose-50 text-rose-800 shadow-sm"
+            indicatorBorder = "border-rose-500"
+            label = <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-100/50 px-2 py-0.5 rounded-md">Your Answer</span>
+          }
+
+          return (
+            <div
+              key={optId}
+              className={`
+                w-full flex items-center text-left px-4 py-2.5 rounded-xl border text-sm font-medium
+                ${stateClasses}
+              `}
+            >
+              <span className="flex items-center gap-2.5">
+                <span
+                  className={`
+                    w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
+                    ${indicatorBorder}
+                  `}
+                >
+                  {(isSelected || isCorrectOption) && (
+                    <span className={`w-2 h-2 rounded-full ${isCorrectOption ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  )}
+                </span>
+                {opt.optionText || opt.text || opt.label || 'Untitled option'}
+              </span>
+              {label}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -122,7 +166,7 @@ const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
  * Result screen shown after quiz is submitted.
  */
 const QuizResult = ({ result, onBackToDashboard }) => {
-  const { totalQuestions, correctAnswers, scorePercent } = result
+  const { totalQuestions, correctAnswers, scorePercent, results } = result
   const isPerfect   = scorePercent === 100
   const isPassing   = scorePercent >= 60
   const scoreColor  = isPerfect ? 'text-emerald-600' : isPassing ? 'text-violet-600' : 'text-rose-500'
@@ -133,12 +177,7 @@ const QuizResult = ({ result, onBackToDashboard }) => {
     : 'bg-rose-400'
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col items-center gap-6 py-4"
-    >
+    <div className="flex flex-col items-center gap-6 py-4">
       {/* Score ring */}
       <div
         className={`w-24 h-24 rounded-full ${ringColor} flex items-center justify-center shadow-lg relative`}
@@ -189,40 +228,31 @@ const QuizResult = ({ result, onBackToDashboard }) => {
         )}
       </div>
 
+      {/* Review Questions */}
+      {results && results.length > 0 && (
+        <div className="w-full text-left mt-4 flex flex-col gap-4">
+          <h4 className="text-sm font-bold text-stone-700 px-1 border-b border-stone-100 pb-2">Review Answers</h4>
+          {results.map((item, idx) => (
+            <QuizResultQuestion key={item.quizId} item={item} index={idx} />
+          ))}
+        </div>
+      )}
+
       {/* CTA */}
-      <motion.button
+      <button
         id="quiz-back-to-dashboard"
         onClick={onBackToDashboard}
-        whileTap={{ scale: 0.96 }}
-        whileHover={{ scale: 1.02 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
         className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white font-semibold text-sm rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 transition-colors duration-150"
       >
         <StudyIcon name="layers" size={14} />
         Back to Dashboard
-      </motion.button>
-    </motion.div>
+      </button>
+    </div>
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// Main component
 
-/**
- * QuizModal — floats over FocusWorkspace after a Pomodoro session completes.
- *
- * Props:
- *   isOpen            boolean          – controls visibility
- *   quizzes           Array<Quiz>      – list of quiz questions with options
- *   isSubmitting      boolean          – disables submit while API call is in flight
- *   error             string|null      – error message to display inline
- *   result            QuizResult|null  – { totalQuestions, correctAnswers, scorePercent }
- *   onSubmit(answers) function         – called with answers: [{ quizId, selectedOptionId }]
- *   onClose           function         – called when user explicitly closes modal (pre-result)
- *   onBackToDashboard function         – called when user clicks "Back to Dashboard" after result
- *
- * A Quiz object shape (matches backend QuizResponse):
- *   { id: UUID, taskId: UUID, questionText: string, options: [{ id: UUID, text: string }] }
- */
 const QuizModal = ({
   isOpen,
   quizzes = [],
@@ -265,211 +295,197 @@ const QuizModal = ({
     onSubmit?.(payload)
   }
 
+  if (!isOpen) return null
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* ── Backdrop ── */}
-          <motion.div
-            key="quiz-overlay"
-            variants={overlayVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="fixed inset-0 z-40"
-            style={{ background: 'rgba(15, 10, 30, 0.42)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+    <>
+      {/* Backdrop */}
+      <div
+        key="quiz-overlay"
+        className="fixed inset-0 z-40"
+        style={{ background: 'rgba(15, 10, 30, 0.42)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quiz-modal-title"
+      >
+        <div
+          key="quiz-panel"
+          className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden"
+          style={{
+            background: 'rgba(252, 250, 247, 0.92)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(124, 58, 237, 0.14)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          {/* Violet top edge highlight */}
+          <div
             aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent"
           />
 
-          {/* ── Panel ── */}
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="quiz-modal-title"
-          >
-            <motion.div
-              key="quiz-panel"
-              variants={panelVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden"
-              style={{
-                background: 'rgba(252, 250, 247, 0.92)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                border: '1px solid rgba(124, 58, 237, 0.14)',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)',
-              }}
-            >
-              {/* Violet top edge highlight */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent"
-              />
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                <StudyIcon name="zap" size={17} className="text-violet-600" />
+              </div>
+              <div>
+                <h2
+                  id="quiz-modal-title"
+                  className="text-base font-bold text-stone-800 leading-snug"
+                >
+                  {result ? 'Session Results' : 'Quick Recall'}
+                </h2>
+                {!result && (
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Answer these questions to lock in what you studied.
+                  </p>
+                )}
+              </div>
+            </div>
 
-              {/* ── Header ── */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                    <StudyIcon name="zap" size={17} className="text-violet-600" />
+            {/* Close only shown before result */}
+            {!result && (
+              <button
+                id="quiz-modal-close"
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 transition-colors focus:outline-none focus:ring-2 focus:ring-stone-300"
+                aria-label="Close quiz"
+                disabled={isSubmitting}
+              >
+                <StudyIcon name="x" size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="mx-6 h-px bg-stone-100" />
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {result ? (
+              <QuizResult result={result} onBackToDashboard={onBackToDashboard} />
+            ) : (
+              <>
+                {/* Progress indicator */}
+                {totalQuestions > 0 && (
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-stone-500">
+                      {answeredCount} / {totalQuestions} answered
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {quizzes.map((q, index) => {
+                        const qId = getQuizId(q)
+
+                        return (
+                          <div
+                            key={qId || index}
+                            className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                              qId && answers[qId] ? 'bg-violet-500' : 'bg-stone-200'
+                            }`}
+                          />
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div>
-                    <h2
-                      id="quiz-modal-title"
-                      className="text-base font-bold text-stone-800 leading-snug"
-                    >
-                      {result ? 'Session Results' : 'Quick Recall'}
-                    </h2>
-                    {!result && (
-                      <p className="text-xs text-stone-500 mt-0.5">
-                        Answer these questions to lock in what you studied.
-                      </p>
-                    )}
+                )}
+
+                {/* Empty state */}
+                {totalQuestions === 0 && !error && (
+                  <div className="flex flex-col items-center gap-3 py-8 text-stone-400">
+                    <StudyIcon name="timer" size={28} className="animate-spin text-violet-400" />
+                    <p className="text-sm">Loading questions…</p>
                   </div>
+                )}
+
+                {/* Error banner */}
+                {error && (
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200">
+                    <StudyIcon name="alert-circle" size={16} className="text-rose-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-rose-700 leading-snug">{error}</p>
+                  </div>
+                )}
+
+                {/* Questions */}
+                {quizzes.map((quiz, i) => {
+                  const qId = getQuizId(quiz)
+                  return (
+                    <QuizQuestion
+                      key={qId || i}
+                      quiz={quiz}
+                      index={i}
+                      selectedOptionId={qId ? answers[qId] : null}
+                      onSelect={handleSelect}
+                    />
+                  )
+                })}
+              </>
+            )}
+          </div>
+
+          {/* Footer (hidden when showing result) */}
+          {!result && (
+            <>
+              <div className="mx-6 h-px bg-stone-100" />
+              <div className="px-6 py-4 shrink-0 flex items-center justify-between gap-3">
+                {/* Helper text / Close */}
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors focus:outline-none"
+                  >
+                    Close
+                  </button>
+                  <p className="text-xs text-stone-400 hidden sm:block">
+                    {allAnswered
+                      ? 'All questions answered — ready to submit!'
+                      : `${totalQuestions - answeredCount} question${totalQuestions - answeredCount !== 1 ? 's' : ''} remaining`}
+                  </p>
                 </div>
 
-                {/* Close — only shown before result */}
-                {!result && (
-                  <motion.button
-                    id="quiz-modal-close"
-                    onClick={onClose}
-                    whileTap={{ scale: 0.93 }}
-                    className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 transition-colors focus:outline-none focus:ring-2 focus:ring-stone-300"
-                    aria-label="Close quiz"
-                    disabled={isSubmitting}
-                  >
-                    <StudyIcon name="x" size={14} />
-                  </motion.button>
-                )}
+                {/* Submit button */}
+                <button
+                  id="quiz-submit-btn"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className={`
+                    flex items-center gap-2 px-6 py-2.5 rounded-2xl font-semibold text-sm
+                    transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2
+                    ${canSubmit
+                      ? 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white shadow-md'
+                      : 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                    }
+                  `}
+                  aria-disabled={!canSubmit}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <StudyIcon name="timer" size={14} className="animate-spin" />
+                      Submitting…
+                    </>
+                  ) : (
+                    <>
+                      <StudyIcon name="arrow-right" size={14} />
+                      Submit
+                    </>
+                  )}
+                </button>
               </div>
-
-              {/* Divider */}
-              <div className="mx-6 h-px bg-stone-100" />
-
-              {/* ── Body ── */}
-              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-                {result ? (
-                  <QuizResult result={result} onBackToDashboard={onBackToDashboard} />
-                ) : (
-                  <>
-                    {/* Progress indicator */}
-                    {totalQuestions > 0 && (
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-stone-500">
-                          {answeredCount} / {totalQuestions} answered
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {quizzes.map((q, index) => {
-                            const qId = getQuizId(q)
-
-                            return (
-                              <div
-                                key={qId || index}
-                                className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                                  qId && answers[qId] ? 'bg-violet-500' : 'bg-stone-200'
-                                }`}
-                              />
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Empty state */}
-                    {totalQuestions === 0 && !error && (
-                      <div className="flex flex-col items-center gap-3 py-8 text-stone-400">
-                        <StudyIcon name="timer" size={28} className="animate-spin text-violet-400" />
-                        <p className="text-sm">Loading questions…</p>
-                      </div>
-                    )}
-
-                    {/* Error banner */}
-                    {error && (
-                      <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200">
-                        <StudyIcon name="alert-circle" size={16} className="text-rose-500 shrink-0 mt-0.5" />
-                        <p className="text-sm text-rose-700 leading-snug">{error}</p>
-                      </div>
-                    )}
-
-                    {/* Questions */}
-                    {quizzes.map((quiz, i) => {
-                      const qId = getQuizId(quiz)
-                      return (
-                        <QuizQuestion
-                          key={qId || i}
-                          quiz={quiz}
-                          index={i}
-                          selectedOptionId={qId ? answers[qId] : null}
-                          onSelect={handleSelect}
-                        />
-                      )
-                    })}
-                  </>
-                )}
-              </div>
-
-              {/* ── Footer (hidden when showing result) ── */}
-              {!result && (
-                <>
-                  <div className="mx-6 h-px bg-stone-100" />
-                  <div className="px-6 py-4 shrink-0 flex items-center justify-between gap-3">
-                    {/* Helper text / Close */}
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isSubmitting}
-                        className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors focus:outline-none"
-                      >
-                        Close
-                      </button>
-                      <p className="text-xs text-stone-400 hidden sm:block">
-                        {allAnswered
-                          ? 'All questions answered — ready to submit!'
-                          : `${totalQuestions - answeredCount} question${totalQuestions - answeredCount !== 1 ? 's' : ''} remaining`}
-                      </p>
-                    </div>
-
-                    {/* Submit button */}
-                    <motion.button
-                      id="quiz-submit-btn"
-                      onClick={handleSubmit}
-                      disabled={!canSubmit}
-                      whileTap={canSubmit ? { scale: 0.96 } : {}}
-                      whileHover={canSubmit ? { scale: 1.02 } : {}}
-                      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                      className={`
-                        flex items-center gap-2 px-6 py-2.5 rounded-2xl font-semibold text-sm
-                        transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2
-                        ${canSubmit
-                          ? 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white shadow-md'
-                          : 'bg-stone-100 text-stone-400 cursor-not-allowed'
-                        }
-                      `}
-                      aria-disabled={!canSubmit}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <StudyIcon name="timer" size={14} className="animate-spin" />
-                          Submitting…
-                        </>
-                      ) : (
-                        <>
-                          <StudyIcon name="arrow-right" size={14} />
-                          Submit
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
 

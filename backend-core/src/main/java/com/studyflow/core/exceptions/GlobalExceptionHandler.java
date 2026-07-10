@@ -96,6 +96,34 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Xử lý lỗi IllegalStateException (ví dụ từ GeminiQuizClient)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalStateException(
+            IllegalStateException exception
+    ) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        String message = exception.getMessage();
+
+        if (message != null) {
+            if (message.contains("temporarily unavailable") || message.contains("Gemini API")) {
+                status = HttpStatus.SERVICE_UNAVAILABLE;
+            } else if (message.contains("chưa xác thực")) {
+                status = HttpStatus.UNAUTHORIZED;
+            } else {
+                status = HttpStatus.BAD_REQUEST;
+            }
+        }
+
+        ApiErrorResponse response = ApiErrorResponse.of(
+                status.value(),
+                message
+        );
+
+        return ResponseEntity.status(status).body(response);
+    }
+
+    /**
      * Fallback cuối cùng để tránh lộ stack trace ra client.
      */
     @ExceptionHandler(Exception.class)
