@@ -46,13 +46,19 @@ const toTimeInput = (t) => {
 
 /** Build an initial form snapshot from a task object. */
 const taskToForm = (task) => ({
+  title: task?.title ?? '',
   scheduledDate: task?.scheduledDate ?? '',
   startTime: toTimeInput(task?.startTime),
   endTime: toTimeInput(task?.endTime),
 })
 
 /** Validate date/time fields, returns error string or null. */
-const validateScheduleForm = (form) => {
+const validateForm = (form, isManualTask) => {
+  if (isManualTask) {
+    const trimmed = form.title.trim()
+    if (!trimmed) return 'Task title is required.'
+    if (trimmed.length > 255) return 'Task title must be 255 characters or fewer.'
+  }
   if (!form.scheduledDate) return 'Date is required.'
   if (!form.startTime) return 'Start time is required.'
   if (!form.endTime) return 'End time is required.'
@@ -74,7 +80,9 @@ const hasScheduleChanged = (form, task) =>
  *   onClose       — callback to close the modal
  *   onTaskUpdated — callback(updatedTask) after a successful update
  */
-const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
+import { deleteTask } from '../../api/taskApi'
+
+const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }) => {
   const navigate = useNavigate()
 
   // ── Status-only loading (Pending/In Progress/Done quick buttons)
@@ -87,6 +95,12 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
   const [formError,    setFormError]    = useState(null)
   const [saveSuccess,  setSaveSuccess]  = useState(false)
 
+  const [isDeleting,          setIsDeleting]          = useState(false)
+  const [showConfirmDelete,   setShowConfirmDelete]   = useState(false)
+
+  const isManualTask = task?.isAiGenerated === false
+  const isAnyBusy = actionLoading !== null || isSaving
+
   /* ── Sync form when task changes (new task opened) ──────────────────────── */
 
   useEffect(() => {
@@ -94,6 +108,8 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
     setFormError(null)
     setSaveSuccess(false)
     setActionError(null)
+    setShowConfirmDelete(false)
+    setIsDeleting(false)
   }, [task?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Escape key closes modal ─────────────────────────────────────────────── */
@@ -102,12 +118,12 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
     if (!task) return undefined
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape' && !isAnyBusy && !isDeleting) onClose?.()
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [task, onClose])
+  }, [task, onClose, isAnyBusy, isDeleting])
 
   if (!task) return null
 
@@ -121,7 +137,8 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
       : null
 
   const scheduleChanged = hasScheduleChanged(editForm, task)
-  const isAnyBusy = actionLoading !== null || isSaving
+  const titleChanged = isManualTask && editForm.title.trim() !== (task?.title ?? '').trim()
+  const hasAnyChanges = scheduleChanged || titleChanged
 
   /* ── Status-only quick update (Pending / In Progress / Done) ────────────── */
 
@@ -146,7 +163,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
 
   const handleSaveSchedule = async () => {
     if (!task.id) return
-    const err = validateScheduleForm(editForm)
+    const err = validateForm(editForm, isManualTask)
     if (err) {
       setFormError(err)
       return
@@ -155,18 +172,22 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
     setIsSaving(true)
     setSaveSuccess(false)
     try {
-      const updated = await updateTask(task.id, {
-        scheduledDate: editForm.scheduledDate,
-        startTime: editForm.startTime,
-        endTime: editForm.endTime,
-      })
+      const payload = {}
+      if (titleChanged) payload.title = editForm.title.trim()
+      if (scheduleChanged) {
+        payload.scheduledDate = editForm.scheduledDate
+        payload.startTime = editForm.startTime
+        payload.endTime = editForm.endTime
+      }
+      const updated = await updateTask(task.id, payload)
       onTaskUpdated?.(updated)
+      setEditForm(taskToForm(updated))
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 2500)
     } catch (err) {
       console.error('[CalendarTaskDetailModal] schedule save failed:', err)
       const msg =
-        err?.data?.message || err?.message || 'Could not save changes. Please try again.'
+        err?.response?.data?.message || err?.data?.message || err?.message || 'Could not save changes. Please try again.'
       setFormError(msg)
     } finally {
       setIsSaving(false)
@@ -179,6 +200,25 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
     setEditForm(taskToForm(task))
     setFormError(null)
     setSaveSuccess(false)
+  }
+
+  /* ── Delete task ─────────────────────────────────────────────────────────── */
+
+  const handleDeleteTask = async () => {
+    if (!task.id || !isManualTask) return
+    setIsDeleting(true)
+    try {
+      await deleteTask(task.id)
+      onTaskDeleted?.(task.id)
+      onClose?.()
+    } catch (err) {
+      console.error('[CalendarTaskDetailModal] delete failed:', err)
+      const msg = err?.data?.message || err?.response?.data?.message || err?.message || 'Could not delete task.'
+      setActionError(msg)
+      setShowConfirmDelete(false)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   /* ── Start Focus ─────────────────────────────────────────────────────────── */
@@ -199,7 +239,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
       {/* ── Overlay ── */}
       <div
         className="fixed inset-0 z-40 bg-black/30"
-        onClick={onClose}
+        onClick={() => { if (!isAnyBusy && !isDeleting) onClose?.() }}
         aria-hidden="true"
       />
 
@@ -259,6 +299,32 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
         {/* ── Scrollable Body ── */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {/* ── Quick edit: schedule ── */}
+          {isManualTask && (
+            <div className="px-5 pt-4 border-b border-stone-100 space-y-3 pb-3">
+              <label className="block">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                    Task title
+                  </span>
+                  <span className="text-[10px] text-stone-400">{editForm.title.length}/255</span>
+                </div>
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={editForm.title}
+                  onChange={(e) => {
+                    setEditForm(f => ({ ...f, title: e.target.value.slice(0, 255) }))
+                    setFormError(null)
+                    setSaveSuccess(false)
+                  }}
+                  disabled={!task.id || isAnyBusy || isDeleting}
+                  required
+                  maxLength={255}
+                />
+              </label>
+            </div>
+          )}
+
           <div className="px-5 pt-3 pb-3 border-b border-stone-100 space-y-3">
           <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
             Schedule
@@ -279,7 +345,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
                 setFormError(null)
                 setSaveSuccess(false)
               }}
-              disabled={!task.id || isAnyBusy}
+              disabled={!task.id || isAnyBusy || isDeleting}
               aria-label="Scheduled date"
             />
           </label>
@@ -300,7 +366,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
                   setFormError(null)
                   setSaveSuccess(false)
                 }}
-                disabled={!task.id || isAnyBusy}
+                disabled={!task.id || isAnyBusy || isDeleting}
                 aria-label="Start time"
               />
             </label>
@@ -318,7 +384,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
                   setFormError(null)
                   setSaveSuccess(false)
                 }}
-                disabled={!task.id || isAnyBusy}
+                disabled={!task.id || isAnyBusy || isDeleting}
                 aria-label="End time"
               />
             </label>
@@ -336,7 +402,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
           {saveSuccess && (
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-600">
               <StudyIcon name="check" size={12} className="text-emerald-500 shrink-0" strokeWidth={2.5} />
-              Schedule saved.
+              Changes saved.
             </div>
           )}
 
@@ -345,14 +411,14 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
             <button
               type="button"
               onClick={handleSaveSchedule}
-              disabled={!task.id || isAnyBusy || !scheduleChanged}
+              disabled={!task.id || isAnyBusy || isDeleting || !hasAnyChanges}
               className={[
                 'flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
-                scheduleChanged && task.id && !isAnyBusy
+                hasAnyChanges && task.id && !isAnyBusy && !isDeleting
                   ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
                   : 'bg-stone-100 text-stone-400 cursor-not-allowed',
               ].join(' ')}
-              aria-label="Save schedule changes"
+              aria-label="Save changes"
             >
               {isSaving ? (
                 <StudyIcon name="timer" size={12} className="animate-spin" />
@@ -362,11 +428,11 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>
 
-            {scheduleChanged && (
+            {hasAnyChanges && (
               <button
                 type="button"
                 onClick={handleResetForm}
-                disabled={isAnyBusy}
+                disabled={isAnyBusy || isDeleting}
                 className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition-colors"
                 aria-label="Reset schedule to original values"
               >
@@ -393,7 +459,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
                 type="button"
                 onClick={handleStartFocus}
                 className="w-full btn-accent justify-center py-2.5 text-sm"
-                disabled={isAnyBusy}
+                disabled={isAnyBusy || isDeleting}
               >
                 <StudyIcon name="zap" size={14} strokeWidth={2.5} />
                 Start Focus Session
@@ -417,7 +483,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
                     <button
                       key={status}
                       type="button"
-                      disabled={isAnyBusy || !task.id}
+                      disabled={isAnyBusy || isDeleting || !task.id}
                       onClick={() => handleStatusUpdate(status)}
                       className={[
                         'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border text-[11px] font-semibold transition-all duration-150',
@@ -441,6 +507,49 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated }) => {
             </div>
           </div>
         </div>
+          {/* ── Danger Section ── */}
+          {isManualTask && (
+            <div className="px-5 pt-3 pb-4">
+
+              {!showConfirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(true)}
+                  disabled={isAnyBusy || isDeleting}
+                  className="w-full py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <StudyIcon name="trash-2" size={14} className="inline-block mr-1.5 -mt-0.5" />
+                  Delete task
+                </button>
+              ) : (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex flex-col gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-red-700">Delete this task?</p>
+                    <p className="text-xs text-red-600/80">This action cannot be undone.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmDelete(false)}
+                      disabled={isDeleting}
+                      className="flex-1 py-2 rounded-lg bg-white border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteTask}
+                      disabled={isDeleting}
+                      className="flex-1 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isDeleting ? <StudyIcon name="timer" size={12} className="animate-spin" /> : null}
+                      {isDeleting ? 'Deleting…' : 'Confirm delete'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -47,4 +47,20 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             @Param("newStart") LocalTime newStart,
             @Param("newEnd") LocalTime newEnd
     );
+
+    /**
+     * Find tasks for the same user on the same date that overlap with [newStart, newEnd),
+     * for task creation (no excludeId).
+     * Overlap condition: newStart < existingEnd AND newEnd > existingStart
+     */
+    @Query("SELECT t FROM Task t WHERE t.userId = :userId" +
+           " AND t.scheduledDate = :date" +
+           " AND t.startTime IS NOT NULL AND t.endTime IS NOT NULL" +
+           " AND :newStart < t.endTime AND :newEnd > t.startTime")
+    List<Task> findOverlappingTasksForCreate(
+            @Param("userId") UUID userId,
+            @Param("date") LocalDate date,
+            @Param("newStart") LocalTime newStart,
+            @Param("newEnd") LocalTime newEnd
+    );
 }

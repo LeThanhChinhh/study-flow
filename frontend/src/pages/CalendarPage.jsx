@@ -26,6 +26,7 @@ import StudyIcon from '../components/StudyIcon'
 import { getTasks, updateTask } from '../api/taskApi'
 import { getGoals } from '../api/goalApi'
 import CalendarTaskDetailModal from '../features/calendar/CalendarTaskDetailModal'
+import CalendarCreateTaskModal from '../features/calendar/CalendarCreateTaskModal'
 import CalendarTaskCard from '../features/calendar/CalendarTaskCard'
 
 /*  CalendarPage  */
@@ -41,6 +42,7 @@ const CalendarPage = () => {
   const [isLoading,  setIsLoading]  = useState(true)
   const [error,      setError]      = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
 
   // Drag-drop state
   const [movingTaskId,    setMovingTaskId]    = useState(null)
@@ -120,10 +122,22 @@ const CalendarPage = () => {
     return tasks.filter(t => t.goalId === selectedGoalId)
   }, [tasks, selectedGoalId])
 
+  const goalTitleById = useMemo(
+    () => new Map(goals.map(goal => [goal.id, goal.title])),
+    [goals]
+  )
+
+  const displayTasks = useMemo(() => {
+    return filteredTasks.map(task => ({
+      ...task,
+      goalTitle: task.goalId ? goalTitleById.get(task.goalId) ?? null : null
+    }))
+  }, [filteredTasks, goalTitleById])
+
   const weekDays    = useMemo(() => getWeekDays(weekAnchor), [weekAnchor])
   const weekStart   = weekDays[0]
   const todayStr    = useMemo(() => formatLocalDate(new Date()), [])
-  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(filteredTasks), [filteredTasks])
+  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(displayTasks), [displayTasks])
 
   // Count tasks that fall in the current week view
   const weekTaskCount = useMemo(() => {
@@ -138,6 +152,12 @@ const CalendarPage = () => {
   const goToPrevWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), -7))
   const goToNextWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), 7))
   const goToToday    = () => setWeekAnchor(new Date())
+
+  const defaultDate = useMemo(() => {
+    const today = new Date()
+    const isTodayInWeek = weekDays.some(d => formatLocalDate(d) === todayStr)
+    return isTodayInWeek ? todayStr : formatLocalDate(weekStart)
+  }, [weekDays, todayStr, weekStart])
 
   /*  Task click → open detail modal  */
 
@@ -162,6 +182,11 @@ const CalendarPage = () => {
     setSelectedTask(prev =>
       prev && prev.id === updatedTask.id ? { ...prev, ...updatedTask } : mergedTask
     )
+  }
+
+  const handleTaskDeleted = (taskId) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    setSelectedTask(prev => prev?.id === taskId ? null : prev)
   }
 
   /*  Drag-drop suppress click helpers  */
@@ -267,7 +292,9 @@ const CalendarPage = () => {
   /*  Render helpers  */
 
   const hasAnyTasks = tasks.length > 0
+  const hasAnyGoals = goals.length > 0
   const isGoalFiltered = selectedGoalId !== 'all'
+  const showGoalBadges = selectedGoalId === 'all'
 
   return (
     <div className="min-h-screen">
@@ -346,7 +373,7 @@ const CalendarPage = () => {
         )}
 
         {/*  Global empty state (no tasks at all)  */}
-        {!isLoading && !error && !hasAnyTasks && !isGoalFiltered && (
+        {!isLoading && !error && !hasAnyTasks && !hasAnyGoals && !isGoalFiltered && (
           <div className="card p-12 flex flex-col items-center justify-center text-center gap-5">
             <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center">
               <StudyIcon name="calendar" size={28} className="text-violet-300" />
@@ -370,7 +397,7 @@ const CalendarPage = () => {
         )}
 
         {/*  Calendar content  */}
-        {!error && (isLoading || hasAnyTasks || isGoalFiltered) && (
+        {!error && (isLoading || hasAnyTasks || hasAnyGoals || isGoalFiltered) && (
           <div className="space-y-5">
 
             {/* Week navigation header */}
@@ -393,6 +420,8 @@ const CalendarPage = () => {
                     return next
                   })
                 }}
+                onAddTask={() => setIsCreateTaskOpen(true)}
+                canAddTask={goals.length > 0}
               />
             </div>
 
@@ -439,6 +468,7 @@ const CalendarPage = () => {
                             isToday={ds === todayStr}
                             onTaskClick={handleTaskClick}
                             isMovingTaskId={movingTaskId}
+                            showGoalBadge={showGoalBadges}
                           />
                         )
                       })
@@ -460,6 +490,7 @@ const CalendarPage = () => {
                         onClick={() => {}}
                         isMoving={false}
                         enableDrag={false}
+                        showGoalBadge={showGoalBadges}
                       />
                     </div>
                   ) : null}
@@ -472,6 +503,7 @@ const CalendarPage = () => {
               <UnscheduledSection
                 tasks={unscheduled}
                 onTaskClick={handleTaskClick}
+                showGoalBadge={showGoalBadges}
               />
             )}
 
@@ -492,8 +524,20 @@ const CalendarPage = () => {
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
       />
 
+      {/*  Create Task Modal  */}
+      <CalendarCreateTaskModal
+        isOpen={isCreateTaskOpen}
+        goals={goals}
+        selectedGoalId={selectedGoalId}
+        defaultDate={defaultDate}
+        onClose={() => setIsCreateTaskOpen(false)}
+        onTaskCreated={(createdTask) => {
+          setTasks(prev => [...prev, createdTask])
+        }}
+      />
     </div>
   )
 }

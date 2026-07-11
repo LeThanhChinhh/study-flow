@@ -44,7 +44,7 @@ const getStatusConfig = (status) =>
  * @param {boolean}  isMoving      - True when this task is being saved after drop (disables drag)
  * @param {boolean}  enableDrag    - Opt-in: only DayColumn passes true; UnscheduledSection does not
  */
-const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = false }) => {
+const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = false, showGoalBadge = false }) => {
   const cfg       = getStatusConfig(task.status)
   const isClickable = Boolean(task.id)
 
@@ -123,6 +123,14 @@ const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = fal
           </span>
         ) : (
           <span />
+        )}
+        {showGoalBadge && task.goalTitle && (
+          <span
+            className="badge bg-stone-100 text-stone-500 text-[9px] px-1.5 py-px shrink-0 max-w-full truncate"
+            title={task.goalTitle}
+          >
+            {task.goalTitle}
+          </span>
         )}
         <span className={`badge text-[9px] px-1.5 py-px shrink-0 whitespace-nowrap max-w-full truncate ${cfg.badge}`}>
           {task.status === 'IN_PROGRESS' ? (

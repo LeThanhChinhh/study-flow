@@ -11,7 +11,7 @@ import {
 
 /*  Day Column  */
 
-export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId }) => {
+export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, showGoalBadge }) => {
   const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1 // 0=Mon…6=Sun
   const dayName  = WEEK_DAY_NAMES_SHORT[dayIndex]
   const dayNum   = date.getDate()
@@ -90,6 +90,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId })
               onClick={() => onTaskClick(task)}
               isMoving={isMovingTaskId === task.id}
               enableDrag
+              showGoalBadge={showGoalBadge}
             />
           ))
         )}
@@ -100,7 +101,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId })
 
 /*  Week Navigation Header  */
 
-export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selectedGoalId, onGoalChange }) => {
+export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selectedGoalId, onGoalChange, onAddTask, canAddTask }) => {
   const weekEnd  = addDays(weekStart, 6)
   const sMonth   = MONTH_NAMES_SHORT[weekStart.getMonth()]
   const eMonth   = MONTH_NAMES_SHORT[weekEnd.getMonth()]
@@ -151,6 +152,28 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selec
       {/* Nav controls */}
       <div className="flex items-center gap-2">
         <button
+          type="button"
+          onClick={onAddTask}
+          disabled={!canAddTask}
+          title={!canAddTask ? 'Create a learning goal first' : 'Add task'}
+          className="
+            btn-primary
+            inline-flex flex-row items-center justify-center
+            gap-1.5 whitespace-nowrap
+            h-9 px-3 text-xs mr-1
+            disabled:opacity-50 disabled:cursor-not-allowed
+          "
+          aria-label="Add task"
+        >
+          <StudyIcon
+            name="plus"
+            size={12}
+            strokeWidth={2.5}
+            className="shrink-0"
+          />
+          <span className="shrink-0">Add task</span>
+        </button>
+        <button
           onClick={onToday}
           className="btn-ghost px-3 py-[0.45rem] text-xs"
           aria-label="Go to current week"
@@ -180,7 +203,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selec
 
 /*  Unscheduled Section  */
 
-export const UnscheduledSection = ({ tasks, onTaskClick }) => {
+export const UnscheduledSection = ({ tasks, onTaskClick, showGoalBadge }) => {
   if (!tasks || tasks.length === 0) return null
   const sorted = sortTasksForCalendar(tasks)
 
@@ -198,7 +221,7 @@ export const UnscheduledSection = ({ tasks, onTaskClick }) => {
       <div className="flex flex-wrap gap-2">
         {sorted.map(task => (
           <div key={task.id} className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[280px]">
-            <CalendarTaskCard task={task} onClick={() => onTaskClick(task)} />
+            <CalendarTaskCard task={task} onClick={() => onTaskClick(task)} showGoalBadge={showGoalBadge} />
           </div>
         ))}
       </div>
