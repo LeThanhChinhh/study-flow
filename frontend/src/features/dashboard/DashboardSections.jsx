@@ -4,7 +4,7 @@ import {
 } from './dashboardData'
 
 /* App navigation */
-export const AppNav = ({ user, onLogout }) => (
+export const AppNav = ({ user, onLogout, onOpenProfile }) => (
   <nav id="dashboard-nav" className="nav-glass sticky top-0 z-20">
     <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
 
@@ -26,18 +26,21 @@ export const AppNav = ({ user, onLogout }) => (
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5">
+        <button 
+          onClick={onOpenProfile}
+          className="flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-xl hover:bg-stone-50 transition-colors text-left"
+          aria-label="Open profile settings"
+        >
           {/* Avatar */}
           <div
             className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-bold select-none uppercase shadow-sm ring-2 ring-white"
-            aria-label={`${user?.username || user?.name || 'Student'}'s avatar`}
           >
             {(user?.username || user?.name || 'S').charAt(0).toUpperCase()}
           </div>
           <span className="hidden sm:block text-sm font-medium text-stone-700">
             {user?.username || user?.name || 'Student'}
           </span>
-        </div>
+        </button>
 
         <div className="nav-sep" />
 
