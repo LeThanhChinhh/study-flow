@@ -66,6 +66,14 @@ public class TaskService {
 
         validateTimeRange(request.startTime(), request.endTime());
 
+        boolean hasScheduleField = request.scheduledDate() != null
+                || request.startTime() != null
+                || request.endTime() != null;
+        
+        if (hasScheduleField) {
+            validateScheduleMove(null, request.goalId(), userId, request.scheduledDate(), request.startTime(), request.endTime());
+        }
+
         Task task = new Task();
         task.setUserId(userId);
         task.setGoalId(request.goalId());
@@ -133,6 +141,9 @@ public class TaskService {
         UUID userId = currentUserService.getCurrentUserId(authentication);
 
         if (request.title() != null) {
+            if (Boolean.TRUE.equals(task.getIsAiGenerated())) {
+                throw new ConflictException("AI-generated task titles cannot be edited.");
+            }
             if (request.title().isBlank()) {
                 throw new IllegalArgumentException("Title must not be empty");
             }
@@ -155,7 +166,7 @@ public class TaskService {
                 || request.endTime() != null;
 
         if (hasScheduleField) {
-            validateScheduleMove(task, userId, candidateDate, candidateStart, candidateEnd);
+            validateScheduleMove(task.getId(), task.getGoalId(), userId, candidateDate, candidateStart, candidateEnd);
         }
 
         if (request.scheduledDate() != null) {
@@ -185,6 +196,9 @@ public class TaskService {
     @Transactional
     public void deleteTask(UUID taskId, Authentication authentication) {
         Task task = findOwnedTask(taskId, authentication);
+        if (Boolean.TRUE.equals(task.getIsAiGenerated())) {
+            throw new ConflictException("AI-generated tasks cannot be deleted.");
+        }
         taskRepository.delete(task);
     }
 
@@ -199,26 +213,34 @@ public class TaskService {
      * Only called when at least one schedule field is present in the update request.
      */
     private void validateScheduleMove(
-            Task task,
+            UUID taskId,
+            UUID goalId,
             UUID userId,
             LocalDate candidateDate,
             LocalTime candidateStart,
             LocalTime candidateEnd
     ) {
-        // 1. scheduledDate requires both startTime and endTime
-        if (candidateDate != null && (candidateStart == null || candidateEnd == null)) {
-            throw new IllegalArgumentException(
-                    "scheduledDate requires both startTime and endTime.");
-        }
+        boolean hasDate = candidateDate != null;
+        boolean hasStart = candidateStart != null;
+        boolean hasEnd = candidateEnd != null;
 
-        // If there's nothing to validate further, stop early
-        if (candidateDate == null || candidateStart == null || candidateEnd == null) {
+        boolean hasAnyScheduleField = hasDate || hasStart || hasEnd;
+        boolean hasCompleteSchedule = hasDate && hasStart && hasEnd;
+
+        if (!hasAnyScheduleField) {
             return;
         }
 
+        if (!hasCompleteSchedule) {
+            throw new IllegalArgumentException(
+                    "scheduledDate, startTime, and endTime must be provided together.");
+        }
+
+        validateTimeRange(candidateStart, candidateEnd);
+
         // 2. Goal date range
-        if (task.getGoalId() != null) {
-            Goal goal = goalRepository.findById(task.getGoalId()).orElse(null);
+        if (goalId != null) {
+            Goal goal = goalRepository.findById(goalId).orElse(null);
             if (goal != null) {
                 if (candidateDate.isBefore(goal.getStartDate())) {
                     throw new IllegalArgumentException(
@@ -245,8 +267,15 @@ public class TaskService {
         }
 
         // 4. Overlap validation
-        List<Task> overlapping = taskRepository.findOverlappingTasks(
-                userId, candidateDate, task.getId(), candidateStart, candidateEnd);
+        List<Task> overlapping;
+        if (taskId == null) {
+            overlapping = taskRepository.findOverlappingTasksForCreate(
+                    userId, candidateDate, candidateStart, candidateEnd);
+        } else {
+            overlapping = taskRepository.findOverlappingTasks(
+                    userId, candidateDate, taskId, candidateStart, candidateEnd);
+        }
+        
         if (!overlapping.isEmpty()) {
             throw new ConflictException("This time overlaps with another task.");
         }

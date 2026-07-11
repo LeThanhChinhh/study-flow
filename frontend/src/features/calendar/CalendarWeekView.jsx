@@ -11,7 +11,7 @@ import {
 
 /*  Day Column  */
 
-export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId }) => {
+export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, showGoalBadge }) => {
   const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1 // 0=Mon…6=Sun
   const dayName  = WEEK_DAY_NAMES_SHORT[dayIndex]
   const dayNum   = date.getDate()
@@ -90,6 +90,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId })
               onClick={() => onTaskClick(task)}
               isMoving={isMovingTaskId === task.id}
               enableDrag
+              showGoalBadge={showGoalBadge}
             />
           ))
         )}
@@ -100,7 +101,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId })
 
 /*  Week Navigation Header  */
 
-export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
+export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selectedGoalId, onGoalChange, onAddTask, canAddTask }) => {
   const weekEnd  = addDays(weekStart, 6)
   const sMonth   = MONTH_NAMES_SHORT[weekStart.getMonth()]
   const eMonth   = MONTH_NAMES_SHORT[weekEnd.getMonth()]
@@ -116,21 +117,62 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
-      {/* Title + range */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-          <StudyIcon name="calendar" size={16} className="text-white" />
+      {/* Title + range + Dropdown */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+            <StudyIcon name="calendar" size={16} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-stone-800 leading-tight tracking-tight">
+              Learning Calendar
+            </h1>
+            <p className="text-xs text-stone-400 mt-0.5">{rangeLabel}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold text-stone-800 leading-tight tracking-tight">
-            Learning Calendar
-          </h1>
-          <p className="text-xs text-stone-400 mt-0.5">{rangeLabel}</p>
-        </div>
+
+        {/* Goal Filter Dropdown */}
+        {goals && goals.length > 0 && (
+          <div className="flex items-center">
+            <select
+              value={selectedGoalId}
+              onChange={(e) => onGoalChange(e.target.value)}
+              aria-label="Filter calendar by goal"
+              className="text-sm border-stone-200 rounded-lg bg-stone-50 text-stone-700 py-1.5 pl-3 pr-8 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all shadow-sm"
+            >
+              <option value="all">All goals</option>
+              {goals.map(g => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Nav controls */}
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onAddTask}
+          disabled={!canAddTask}
+          title={!canAddTask ? 'Create a learning goal first' : 'Add task'}
+          className="
+            btn-primary
+            inline-flex flex-row items-center justify-center
+            gap-1.5 whitespace-nowrap
+            h-9 px-3 text-xs mr-1
+            disabled:opacity-50 disabled:cursor-not-allowed
+          "
+          aria-label="Add task"
+        >
+          <StudyIcon
+            name="plus"
+            size={12}
+            strokeWidth={2.5}
+            className="shrink-0"
+          />
+          <span className="shrink-0">Add task</span>
+        </button>
         <button
           onClick={onToday}
           className="btn-ghost px-3 py-[0.45rem] text-xs"
@@ -161,7 +203,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
 
 /*  Unscheduled Section  */
 
-export const UnscheduledSection = ({ tasks, onTaskClick }) => {
+export const UnscheduledSection = ({ tasks, onTaskClick, showGoalBadge }) => {
   if (!tasks || tasks.length === 0) return null
   const sorted = sortTasksForCalendar(tasks)
 
@@ -179,7 +221,7 @@ export const UnscheduledSection = ({ tasks, onTaskClick }) => {
       <div className="flex flex-wrap gap-2">
         {sorted.map(task => (
           <div key={task.id} className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[280px]">
-            <CalendarTaskCard task={task} onClick={() => onTaskClick(task)} />
+            <CalendarTaskCard task={task} onClick={() => onTaskClick(task)} showGoalBadge={showGoalBadge} />
           </div>
         ))}
       </div>
@@ -189,24 +231,35 @@ export const UnscheduledSection = ({ tasks, onTaskClick }) => {
 
 /*  Empty week state  */
 
-export const EmptyWeek = ({ onCreatePlan, onToday }) => (
+export const EmptyWeek = ({ onCreatePlan, onToday, isGoalFiltered, onClearGoalFilter }) => (
   <div className="col-span-7 flex flex-col items-center justify-center py-14 text-center">
     <div className="w-14 h-14 bg-stone-100 rounded-2xl flex items-center justify-center mb-4">
       <StudyIcon name="calendar" size={24} className="text-stone-300" />
     </div>
-    <p className="text-sm font-medium text-stone-600 mb-1">No tasks scheduled this week</p>
+    <p className="text-sm font-medium text-stone-600 mb-1">
+      {isGoalFiltered ? "No tasks for this goal this week." : "No tasks scheduled this week"}
+    </p>
     <p className="text-xs text-stone-400 mb-5 max-w-xs">
-      Navigate to another week or create a learning plan to fill your calendar.
+      {isGoalFiltered 
+        ? "Try looking at another week or view all goals."
+        : "Navigate to another week or create a learning plan to fill your calendar."}
     </p>
     <div className="flex items-center gap-2 flex-wrap justify-center">
       <button onClick={onToday} className="btn-ghost text-xs px-3 py-1.5">
         <StudyIcon name="clock" size={12} />
         Go to today
       </button>
-      <button onClick={onCreatePlan} className="btn-accent text-xs px-3 py-1.5">
-        <StudyIcon name="plus" size={12} strokeWidth={2.5} />
-        Create learning plan
-      </button>
+      {isGoalFiltered ? (
+        <button onClick={onClearGoalFilter} className="btn-accent text-xs px-3 py-1.5">
+          <StudyIcon name="layers" size={12} strokeWidth={2.5} />
+          Show all goals
+        </button>
+      ) : (
+        <button onClick={onCreatePlan} className="btn-accent text-xs px-3 py-1.5">
+          <StudyIcon name="plus" size={12} strokeWidth={2.5} />
+          Create learning plan
+        </button>
+      )}
     </div>
   </div>
 )

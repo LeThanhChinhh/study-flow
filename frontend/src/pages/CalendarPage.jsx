@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -24,20 +24,25 @@ import {
 } from '../features/calendar/calendarUtils'
 import StudyIcon from '../components/StudyIcon'
 import { getTasks, updateTask } from '../api/taskApi'
+import { getGoals } from '../api/goalApi'
 import CalendarTaskDetailModal from '../features/calendar/CalendarTaskDetailModal'
+import CalendarCreateTaskModal from '../features/calendar/CalendarCreateTaskModal'
 import CalendarTaskCard from '../features/calendar/CalendarTaskCard'
 
 /*  CalendarPage  */
 
 const CalendarPage = () => {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // weekAnchor: a Date in the displayed week (we derive Mon–Sun from it)
   const [weekAnchor, setWeekAnchor] = useState(() => new Date())
   const [tasks,      setTasks]      = useState([])
+  const [goals,      setGoals]      = useState([])
   const [isLoading,  setIsLoading]  = useState(true)
   const [error,      setError]      = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
 
   // Drag-drop state
   const [movingTaskId,    setMovingTaskId]    = useState(null)
@@ -70,14 +75,18 @@ const CalendarPage = () => {
 
   /*  Data fetching  */
 
-  const fetchTasks = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
-      const data = await getTasks()
-      setTasks(Array.isArray(data) ? data : [])
+      const [tasksData, goalsData] = await Promise.all([
+        getTasks(),
+        getGoals()
+      ])
+      setTasks(Array.isArray(tasksData) ? tasksData : [])
+      setGoals(Array.isArray(goalsData) ? goalsData : [])
     } catch (err) {
-      console.error('[CalendarPage] Failed to fetch tasks:', err)
+      console.error('[CalendarPage] Failed to fetch data:', err)
       setError('Could not load your calendar.')
     } finally {
       setIsLoading(false)
@@ -85,15 +94,50 @@ const CalendarPage = () => {
   }, [])
 
   useEffect(() => {
-    fetchTasks()
-  }, [fetchTasks])
+    fetchData()
+  }, [fetchData])
 
   /*  Derived data  */
+
+  const requestedGoalId = searchParams.get('goalId')
+  const selectedGoalId = requestedGoalId || 'all'
+
+  // Clean up invalid goalId from URL
+ useEffect(() => {
+  if (isLoading || !requestedGoalId) return
+
+  const exists = goals.some(goal => goal.id === requestedGoalId)
+
+  if (!exists) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('goalId')
+      return next
+    }, { replace: true })
+  }
+}, [isLoading, goals, requestedGoalId, setSearchParams])
+
+  const filteredTasks = useMemo(() => {
+    if (selectedGoalId === 'all') return tasks
+    return tasks.filter(t => t.goalId === selectedGoalId)
+  }, [tasks, selectedGoalId])
+
+  const goalTitleById = useMemo(
+    () => new Map(goals.map(goal => [goal.id, goal.title])),
+    [goals]
+  )
+
+  const displayTasks = useMemo(() => {
+    return filteredTasks.map(task => ({
+      ...task,
+      goalTitle: task.goalId ? goalTitleById.get(task.goalId) ?? null : null
+    }))
+  }, [filteredTasks, goalTitleById])
 
   const weekDays    = useMemo(() => getWeekDays(weekAnchor), [weekAnchor])
   const weekStart   = weekDays[0]
   const todayStr    = useMemo(() => formatLocalDate(new Date()), [])
-  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(tasks), [tasks])
+  const { byDate, unscheduled } = useMemo(() => groupTasksByDate(displayTasks), [displayTasks])
 
   // Count tasks that fall in the current week view
   const weekTaskCount = useMemo(() => {
@@ -108,6 +152,12 @@ const CalendarPage = () => {
   const goToPrevWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), -7))
   const goToNextWeek = () => setWeekAnchor(prev => addDays(getStartOfWeek(prev), 7))
   const goToToday    = () => setWeekAnchor(new Date())
+
+  const defaultDate = useMemo(() => {
+    const today = new Date()
+    const isTodayInWeek = weekDays.some(d => formatLocalDate(d) === todayStr)
+    return isTodayInWeek ? todayStr : formatLocalDate(weekStart)
+  }, [weekDays, todayStr, weekStart])
 
   /*  Task click → open detail modal  */
 
@@ -132,6 +182,11 @@ const CalendarPage = () => {
     setSelectedTask(prev =>
       prev && prev.id === updatedTask.id ? { ...prev, ...updatedTask } : mergedTask
     )
+  }
+
+  const handleTaskDeleted = (taskId) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    setSelectedTask(prev => prev?.id === taskId ? null : prev)
   }
 
   /*  Drag-drop suppress click helpers  */
@@ -236,8 +291,10 @@ const CalendarPage = () => {
 
   /*  Render helpers  */
 
-  const hasTasks = tasks.length > 0
-
+  const hasAnyTasks = tasks.length > 0
+  const hasAnyGoals = goals.length > 0
+  const isGoalFiltered = selectedGoalId !== 'all'
+  const showGoalBadges = selectedGoalId === 'all'
 
   return (
     <div className="min-h-screen">
@@ -304,7 +361,7 @@ const CalendarPage = () => {
               <p className="text-xs text-stone-400">Check your connection and try again.</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={fetchTasks} className="btn-accent text-xs px-4 py-2">
+              <button onClick={fetchData} className="btn-accent text-xs px-4 py-2">
                 <StudyIcon name="zap" size={12} />
                 Retry
               </button>
@@ -316,7 +373,7 @@ const CalendarPage = () => {
         )}
 
         {/*  Global empty state (no tasks at all)  */}
-        {!isLoading && !error && !hasTasks && (
+        {!isLoading && !error && !hasAnyTasks && !hasAnyGoals && !isGoalFiltered && (
           <div className="card p-12 flex flex-col items-center justify-center text-center gap-5">
             <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center">
               <StudyIcon name="calendar" size={28} className="text-violet-300" />
@@ -340,7 +397,7 @@ const CalendarPage = () => {
         )}
 
         {/*  Calendar content  */}
-        {!error && (isLoading || hasTasks) && (
+        {!error && (isLoading || hasAnyTasks || hasAnyGoals || isGoalFiltered) && (
           <div className="space-y-5">
 
             {/* Week navigation header */}
@@ -350,6 +407,21 @@ const CalendarPage = () => {
                 onPrev={goToPrevWeek}
                 onNext={goToNextWeek}
                 onToday={goToToday}
+                goals={goals}
+                selectedGoalId={selectedGoalId}
+                onGoalChange={(newId) => {
+                  setSearchParams(prev => {
+                    const next = new URLSearchParams(prev)
+                    if (newId === 'all') {
+                      next.delete('goalId')
+                    } else {
+                      next.set('goalId', newId)
+                    }
+                    return next
+                  })
+                }}
+                onAddTask={() => setIsCreateTaskOpen(true)}
+                canAddTask={goals.length > 0}
               />
             </div>
 
@@ -376,6 +448,14 @@ const CalendarPage = () => {
                       <EmptyWeek
                         onCreatePlan={() => navigate('/planning')}
                         onToday={goToToday}
+                        isGoalFiltered={isGoalFiltered}
+                        onClearGoalFilter={() => {
+                          setSearchParams(prev => {
+                            const next = new URLSearchParams(prev)
+                            next.delete('goalId')
+                            return next
+                          })
+                        }}
                       />
                     )
                     : weekDays.map(date => {
@@ -388,6 +468,7 @@ const CalendarPage = () => {
                             isToday={ds === todayStr}
                             onTaskClick={handleTaskClick}
                             isMovingTaskId={movingTaskId}
+                            showGoalBadge={showGoalBadges}
                           />
                         )
                       })
@@ -409,6 +490,7 @@ const CalendarPage = () => {
                         onClick={() => {}}
                         isMoving={false}
                         enableDrag={false}
+                        showGoalBadge={showGoalBadges}
                       />
                     </div>
                   ) : null}
@@ -421,6 +503,7 @@ const CalendarPage = () => {
               <UnscheduledSection
                 tasks={unscheduled}
                 onTaskClick={handleTaskClick}
+                showGoalBadge={showGoalBadges}
               />
             )}
 
@@ -441,8 +524,20 @@ const CalendarPage = () => {
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
       />
 
+      {/*  Create Task Modal  */}
+      <CalendarCreateTaskModal
+        isOpen={isCreateTaskOpen}
+        goals={goals}
+        selectedGoalId={selectedGoalId}
+        defaultDate={defaultDate}
+        onClose={() => setIsCreateTaskOpen(false)}
+        onTaskCreated={(createdTask) => {
+          setTasks(prev => [...prev, createdTask])
+        }}
+      />
     </div>
   )
 }
