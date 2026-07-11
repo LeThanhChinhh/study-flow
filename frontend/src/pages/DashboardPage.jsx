@@ -9,11 +9,13 @@ import {
   FocusSessionCard,
   StudyStreakCard,
   LearningProgressCard,
-  QuickActionsBar
+  QuickActionsBar,
+  FocusHistoryCard
 } from '../features/dashboard/DashboardSections'
 import TimeSlotEditorModal from '../features/dashboard/TimeSlotEditorModal'
 import GoalOverviewModal from '../features/dashboard/GoalOverviewModal'
 import { getTasks } from '../api/taskApi'
+import { getPomodoroLogs } from '../api/pomodoroApi'
 
 const formatLocalDate = () => {
   const date = new Date()
@@ -54,6 +56,11 @@ const DashboardPage = () => {
   const [retryCount, setRetryCount] = useState(0)
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false)
   const [showGoalModal, setShowGoalModal] = useState(false)
+
+  const [focusLogs, setFocusLogs] = useState([])
+  const [isFocusHistoryLoading, setIsFocusHistoryLoading] = useState(true)
+  const [focusHistoryError, setFocusHistoryError] = useState(null)
+  const [focusHistoryRetryCount, setFocusHistoryRetryCount] = useState(0)
 
   useEffect(() => {
     const fetchTodayTasks = async () => {
@@ -115,6 +122,31 @@ const DashboardPage = () => {
     }
   }, [user, retryCount])
 
+  useEffect(() => {
+    const fetchFocusHistory = async () => {
+      try {
+        setIsFocusHistoryLoading(true)
+        setFocusHistoryError(null)
+
+        const data = await getPomodoroLogs()
+        setFocusLogs(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error('[DashboardPage] Failed to fetch focus history:', error)
+        setFocusLogs([])
+        setFocusHistoryError('Could not load focus history.')
+      } finally {
+        setIsFocusHistoryLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchFocusHistory()
+    } else {
+      setFocusLogs([])
+      setIsFocusHistoryLoading(false)
+    }
+  }, [user, focusHistoryRetryCount])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -122,6 +154,10 @@ const DashboardPage = () => {
 
   const handleRetry = () => {
     setRetryCount(c => c + 1)
+  }
+
+  const handleFocusHistoryRetry = () => {
+    setFocusHistoryRetryCount(count => count + 1)
   }
 
   const remainingTasksCount = tasks.filter(t => t.status !== 'done').length
@@ -187,6 +223,16 @@ const DashboardPage = () => {
         >
           <div className="lg:col-span-2"><StudyStreakCard user={user} /></div>
           <div className="lg:col-span-3"><LearningProgressCard user={user} tasks={allTasks} todayTasks={tasks} onCreateGoal={handleOpenPlanning} /></div>
+        </div>
+
+        <div className="animate-card-rise" style={{ animationDelay: '0.28s' }}>
+          <FocusHistoryCard
+            logs={focusLogs}
+            tasks={allTasks}
+            isLoading={isFocusHistoryLoading}
+            error={focusHistoryError}
+            onRetry={handleFocusHistoryRetry}
+          />
         </div>
 
         <QuickActionsBar

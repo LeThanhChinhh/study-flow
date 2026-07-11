@@ -649,3 +649,5 @@ export const QuickActionsBar = ({ onOpenGoals, onUploadPdf, onOpenWorkspace, onE
     </div>
   </section>
 )
+
+export { default as FocusHistoryCard } from './FocusHistoryCard'
