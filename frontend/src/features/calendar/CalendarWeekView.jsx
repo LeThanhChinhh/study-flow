@@ -100,7 +100,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId })
 
 /*  Week Navigation Header  */
 
-export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
+export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selectedGoalId, onGoalChange }) => {
   const weekEnd  = addDays(weekStart, 6)
   const sMonth   = MONTH_NAMES_SHORT[weekStart.getMonth()]
   const eMonth   = MONTH_NAMES_SHORT[weekEnd.getMonth()]
@@ -116,17 +116,36 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday }) => {
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
-      {/* Title + range */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-          <StudyIcon name="calendar" size={16} className="text-white" />
+      {/* Title + range + Dropdown */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+            <StudyIcon name="calendar" size={16} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-stone-800 leading-tight tracking-tight">
+              Learning Calendar
+            </h1>
+            <p className="text-xs text-stone-400 mt-0.5">{rangeLabel}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold text-stone-800 leading-tight tracking-tight">
-            Learning Calendar
-          </h1>
-          <p className="text-xs text-stone-400 mt-0.5">{rangeLabel}</p>
-        </div>
+
+        {/* Goal Filter Dropdown */}
+        {goals && goals.length > 0 && (
+          <div className="flex items-center">
+            <select
+              value={selectedGoalId}
+              onChange={(e) => onGoalChange(e.target.value)}
+              aria-label="Filter calendar by goal"
+              className="text-sm border-stone-200 rounded-lg bg-stone-50 text-stone-700 py-1.5 pl-3 pr-8 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all shadow-sm"
+            >
+              <option value="all">All goals</option>
+              {goals.map(g => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Nav controls */}
@@ -189,24 +208,35 @@ export const UnscheduledSection = ({ tasks, onTaskClick }) => {
 
 /*  Empty week state  */
 
-export const EmptyWeek = ({ onCreatePlan, onToday }) => (
+export const EmptyWeek = ({ onCreatePlan, onToday, isGoalFiltered, onClearGoalFilter }) => (
   <div className="col-span-7 flex flex-col items-center justify-center py-14 text-center">
     <div className="w-14 h-14 bg-stone-100 rounded-2xl flex items-center justify-center mb-4">
       <StudyIcon name="calendar" size={24} className="text-stone-300" />
     </div>
-    <p className="text-sm font-medium text-stone-600 mb-1">No tasks scheduled this week</p>
+    <p className="text-sm font-medium text-stone-600 mb-1">
+      {isGoalFiltered ? "No tasks for this goal this week." : "No tasks scheduled this week"}
+    </p>
     <p className="text-xs text-stone-400 mb-5 max-w-xs">
-      Navigate to another week or create a learning plan to fill your calendar.
+      {isGoalFiltered 
+        ? "Try looking at another week or view all goals."
+        : "Navigate to another week or create a learning plan to fill your calendar."}
     </p>
     <div className="flex items-center gap-2 flex-wrap justify-center">
       <button onClick={onToday} className="btn-ghost text-xs px-3 py-1.5">
         <StudyIcon name="clock" size={12} />
         Go to today
       </button>
-      <button onClick={onCreatePlan} className="btn-accent text-xs px-3 py-1.5">
-        <StudyIcon name="plus" size={12} strokeWidth={2.5} />
-        Create learning plan
-      </button>
+      {isGoalFiltered ? (
+        <button onClick={onClearGoalFilter} className="btn-accent text-xs px-3 py-1.5">
+          <StudyIcon name="layers" size={12} strokeWidth={2.5} />
+          Show all goals
+        </button>
+      ) : (
+        <button onClick={onCreatePlan} className="btn-accent text-xs px-3 py-1.5">
+          <StudyIcon name="plus" size={12} strokeWidth={2.5} />
+          Create learning plan
+        </button>
+      )}
     </div>
   </div>
 )

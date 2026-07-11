@@ -127,11 +127,12 @@ const GoalOverviewModal = ({ onClose }) => {
                 return (
                   <div key={goal.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:border-violet-200">
                     {/* Goal Header */}
-                    <button 
-                      className="w-full text-left px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 focus:outline-none focus:bg-stone-50"
-                      onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
-                    >
-                      <div className="flex-1 min-w-0">
+                    <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      {/* Clickable main area to expand */}
+                      <button 
+                        className="flex-1 text-left min-w-0 focus:outline-none"
+                        onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
+                      >
                         <div className="flex items-center gap-2 mb-1.5">
                           <h3 className="font-semibold text-stone-800 truncate">{goal.title}</h3>
                           <span className={`text-[10px] px-2 py-0.5 rounded border font-medium ${statusCls}`}>
@@ -144,9 +145,11 @@ const GoalOverviewModal = ({ onClose }) => {
                             {goal.startDate} → {goal.deadline}
                           </span>
                         </div>
-                      </div>
+                      </button>
 
+                      {/* Right side controls */}
                       <div className="flex items-center gap-4 shrink-0">
+                        {/* Progress */}
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex items-center gap-1.5 text-xs font-medium text-stone-700">
                             <span>{goal.progress}%</span>
@@ -161,11 +164,32 @@ const GoalOverviewModal = ({ onClose }) => {
                             />
                           </div>
                         </div>
-                        <div className={`text-stone-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                          <StudyIcon name="chevron-down" size={16} />
+
+                        <div className="w-px h-8 bg-stone-200 hidden sm:block"></div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              onClose();
+                              navigate(`/calendar?goalId=${encodeURIComponent(goal.id)}`);
+                            }}
+                            className="btn-ghost text-xs px-2 py-1 text-violet-600 hover:bg-violet-50"
+                            title="View schedule"
+                          >
+                            <StudyIcon name="calendar" size={14} />
+                            <span className="hidden sm:inline ml-1">Schedule</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
+                            className={`text-stone-400 hover:text-stone-600 p-1 rounded transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          >
+                            <StudyIcon name="chevron-down" size={16} />
+                          </button>
                         </div>
                       </div>
-                    </button>
+                    </div>
 
                     {/* Goal Tasks (Expanded) */}
                     {isExpanded && (
@@ -230,7 +254,7 @@ const GoalOverviewModal = ({ onClose }) => {
             className="btn-primary w-auto shrink-0 text-xs px-4 py-2 flex items-center gap-2"
           >
             <StudyIcon name="calendar" size={14} />
-            <span>View Schedule</span>
+            <span>View all schedules</span>
           </button>
         </div>
       </div>
