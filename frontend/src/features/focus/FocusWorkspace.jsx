@@ -1,30 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getTaskById } from '../../api/taskApi'
-import { savePomodoroLog } from '../../api/pomodoroApi'
-import { generateQuiz, submitQuiz } from '../../api/quizApi'
+import { submitQuiz } from '../../api/quizApi'
 import { motion } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 import FocusDecor from './FocusDecor'
 import FocusTimer from './FocusTimer'
 import { CurrentTaskPanel, SupportPanel } from './FocusPanels'
 import QuizModal from './QuizModal'
-import { POMODORO_SECONDS } from './focusData'
-
-const calculateDurationSeconds = (startTime, endTime) => {
-  if (!startTime || !endTime) return POMODORO_SECONDS
-  try {
-    const [h1, m1] = startTime.split(':').map(Number)
-    const [h2, m2] = endTime.split(':').map(Number)
-    let diffMins = (h2 * 60 + m2) - (h1 * 60 + m1)
-    if (diffMins < 0) diffMins += 24 * 60
-    return diffMins > 0 ? diffMins * 60 : POMODORO_SECONDS
-  } catch (e) {
-    return POMODORO_SECONDS
-  }
-}
-
-// Timer status values: 'ready' | 'focusing' | 'paused' | 'complete'
+import { usePomodoroCycle, PHASES } from './usePomodoroCycle'
 
 // Entrance animation variants for the main content wrapper
 const contentVariants = {
@@ -66,15 +50,32 @@ const FocusWorkspace = () => {
   const [isTaskLoading, setIsTaskLoading] = useState(false)
   const [taskError, setTaskError] = useState(null)
 
-  // Completion & Quiz state
-  const [isCompletingSession, setIsCompletingSession] = useState(false)
+  // Completion & Quiz state (quiz decoupled in Commit 2)
   const [quizList, setQuizList] = useState([])
   const [quizError, setQuizError] = useState(null)
   const [isQuizOpen, setIsQuizOpen] = useState(false)
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false)
   const [quizResult, setQuizResult] = useState(null)
   
-  const hasHandledCompletionRef = useRef(false)
+  const {
+    phase,
+    timeLeft,
+    totalTime,
+    saveError,
+    abortError,
+    abortNotice,
+    isAborting,
+    startFocus,
+    pauseFocus,
+    suspendFocusForAbort,
+    resumeFocus,
+    abortFocus,
+    retrySave,
+    pauseBreak,
+    resumeBreak,
+    skipBreak,
+    startNextFocus
+  } = usePomodoroCycle(taskId)
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -94,112 +95,6 @@ const FocusWorkspace = () => {
     fetchTask()
   }, [taskId])
 
-
-  // Timer state
-  const [sessionSeconds, setSessionSeconds] = useState(POMODORO_SECONDS)
-  const [secondsLeft, setSecondsLeft]       = useState(POMODORO_SECONDS)
-  const [status, setStatus]                 = useState('ready')
-  const intervalRef = useRef(null)
-
-  // When task loads/changes, update session timer
-  useEffect(() => {
-    if (currentTask) {
-      const secs = calculateDurationSeconds(currentTask.startTime, currentTask.endTime)
-      setSessionSeconds(secs)
-      setSecondsLeft(secs)
-      setStatus('ready')
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      hasHandledCompletionRef.current = false
-    }
-  }, [currentTask])
-
-  // Clear any running interval
-  const clearTick = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }, [])
-
-  // Cleanup on unmount
-  useEffect(() => () => clearTick(), [clearTick])
-
-  // Tick logic — decrements every second while focusing
-  const startTick = useCallback(() => {
-    clearTick()
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current)
-          intervalRef.current = null
-          setStatus('complete')
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }, [clearTick])
-
-  const handleStart = () => {
-    setStatus('focusing')
-    startTick()
-  }
-
-  const handlePause = () => {
-    clearTick()
-    setStatus('paused')
-  }
-
-  const handleResume = () => {
-    setStatus('focusing')
-    startTick()
-  }
-
-  const handleReset = () => {
-    clearTick()
-    setSecondsLeft(sessionSeconds)
-    setStatus('ready')
-    hasHandledCompletionRef.current = false
-  }
-
-  const handleTimerComplete = async () => {
-    if (!currentTask?.id) {
-      setQuizError('No current task found to generate quiz.')
-      setIsQuizOpen(true)
-      return
-    }
-    if (hasHandledCompletionRef.current) return
-    hasHandledCompletionRef.current = true
-
-    try {
-      setIsCompletingSession(true)
-      setQuizError(null)
-
-      // 1. Save Pomodoro Log
-      await savePomodoroLog({
-        taskId: currentTask.id,
-        focusMinutes: Math.max(1, Math.round(sessionSeconds / 60))
-      })
-
-      // 2. Generate Quiz
-      const quizzes = await generateQuiz({
-        taskId: currentTask.id
-      })
-      
-      setQuizList(quizzes)
-      setIsQuizOpen(true)
-    } catch (err) {
-      console.error('Failed to complete session:', err)
-      setQuizError(err.message || 'Failed to complete session and load quiz.')
-      setIsQuizOpen(true)
-    } finally {
-      setIsCompletingSession(false)
-    }
-  }
-
   const handleQuizSubmit = async (answers) => {
     if (isSubmittingQuiz) return
     try {
@@ -207,7 +102,7 @@ const FocusWorkspace = () => {
       setQuizError(null)
       const result = await submitQuiz({
         answers,
-        completeTaskAfterSubmit: true
+        completeTaskAfterSubmit: false // Do not mark task completed in this commit
       })
       setQuizResult(result)
     } catch (err) {
@@ -223,6 +118,37 @@ const FocusWorkspace = () => {
 
   const isCurrentTaskCompleted =
     currentTask?.status === 'COMPLETED' || currentTask?.status === 'done'
+
+  const disabled = !currentTask || isTaskLoading || isCurrentTaskCompleted || phase === PHASES.LOADING_SETTINGS || phase === PHASES.SAVING_SESSION || phase === PHASES.SESSION_SAVE_ERROR || isAborting
+
+  let statusText = 'Ready when you are'
+  let statusColorClass = 'bg-stone-300'
+  
+  if (phase === PHASES.LOADING_SETTINGS) {
+    statusText = 'Loading settings...'
+    statusColorClass = 'bg-stone-300'
+  } else if (phase === PHASES.FOCUSING) {
+    statusText = 'Session running'
+    statusColorClass = 'bg-violet-500 animate-pulse-soft'
+  } else if (phase === PHASES.FOCUS_PAUSED) {
+    statusText = 'Session paused'
+    statusColorClass = 'bg-amber-400'
+  } else if (phase === PHASES.SAVING_SESSION) {
+    statusText = 'Saving session...'
+    statusColorClass = 'bg-amber-400 animate-pulse-soft'
+  } else if (phase === PHASES.SESSION_SAVE_ERROR) {
+    statusText = saveError || 'Failed to save session'
+    statusColorClass = 'bg-rose-500'
+  } else if (phase === PHASES.BREAKING) {
+    statusText = 'Taking a short break'
+    statusColorClass = 'bg-teal-500 animate-pulse-soft'
+  } else if (phase === PHASES.BREAK_PAUSED) {
+    statusText = 'Break paused'
+    statusColorClass = 'bg-teal-300'
+  } else if (phase === PHASES.READY_FOR_NEXT_FOCUS) {
+    statusText = 'Ready for next session'
+    statusColorClass = 'bg-violet-400'
+  }
 
   return (
     <div className="relative min-h-screen">
@@ -305,35 +231,51 @@ const FocusWorkspace = () => {
             className="flex flex-col items-center justify-start gap-4"
           >
             <FocusTimer
-              sessionSeconds={sessionSeconds}
-              secondsLeft={secondsLeft}
-              status={status}
-              onStart={handleStart}
-              onPause={handlePause}
-              onResume={handleResume}
-              onReset={handleReset}
-              onComplete={handleTimerComplete}
-              disabled={!currentTask || isTaskLoading || isCompletingSession || isCurrentTaskCompleted}
-              isCompletingSession={isCompletingSession}
+              phase={phase}
+              timeLeft={timeLeft}
+              totalTime={totalTime}
+              onStartFocus={startFocus}
+              onPauseFocus={pauseFocus}
+              onSuspendFocusForAbort={suspendFocusForAbort}
+              onResumeFocus={resumeFocus}
+              onAbortFocus={abortFocus}
+              onPauseBreak={pauseBreak}
+              onResumeBreak={resumeBreak}
+              onSkipBreak={skipBreak}
+              onStartNextFocus={startNextFocus}
+              disabled={disabled}
+              isAborting={isAborting}
             />
 
             {/* Session mode indicator (visible below the timer on all sizes) */}
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex flex-col items-center gap-2 mt-2">
               <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full ${
-                  status === 'focusing' ? 'bg-violet-500 animate-pulse-soft' :
-                  status === 'complete' ? 'bg-emerald-500' :
-                  status === 'paused'   ? 'bg-amber-400' :
-                  'bg-stone-300'
-                }`}/>
-                <span className="text-xs text-stone-500 font-medium">
-                  {isCompletingSession ? 'Saving session and preparing quiz...' :
-                   status === 'focusing' ? 'Session running' :
-                   status === 'complete' ? 'Great work!' :
-                   status === 'paused'   ? 'Session paused' :
-                   'Ready when you are'}
+                <div className={`w-2 h-2 rounded-full ${statusColorClass}`}/>
+                <span className={`text-xs font-medium ${phase === PHASES.SESSION_SAVE_ERROR ? 'text-rose-500' : 'text-stone-500'}`}>
+                  {statusText}
                 </span>
               </div>
+              
+              {phase === PHASES.SESSION_SAVE_ERROR && (
+                <button
+                  onClick={retrySave}
+                  className="mt-1 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors border border-rose-200"
+                >
+                  Retry Saving
+                </button>
+              )}
+
+              {abortError && (
+                <div className="mt-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium rounded-lg">
+                  {abortError}
+                </div>
+              )}
+
+              {abortNotice && (
+                <div className="mt-1 px-3 py-1.5 bg-stone-50 border border-stone-200 text-stone-500 text-xs font-medium rounded-lg text-center max-w-xs">
+                  {abortNotice}
+                </div>
+              )}
             </div>
           </motion.div>
 
