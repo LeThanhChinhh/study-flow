@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getTaskById } from '../../api/taskApi'
-import { submitQuiz } from '../../api/quizApi'
+import { getPomodoroLogsByTask } from '../../api/pomodoroApi'
+import { getUserSettings } from '../../api/userSettingsApi'
+import { generateQuiz, submitQuiz } from '../../api/quizApi'
 import { motion } from 'motion/react'
 import StudyIcon from '../../components/StudyIcon'
 import FocusDecor from './FocusDecor'
@@ -10,7 +12,6 @@ import { CurrentTaskPanel, SupportPanel } from './FocusPanels'
 import QuizModal from './QuizModal'
 import { usePomodoroCycle, PHASES } from './usePomodoroCycle'
 
-// Entrance animation variants for the main content wrapper
 const contentVariants = {
   hidden: { opacity: 0, y: 24 },
   visible: {
@@ -24,13 +25,11 @@ const contentVariants = {
   },
 }
 
-// Top bar slides in from above
 const navVariants = {
   hidden:  { opacity: 0, y: -16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 }
 
-// Timer column rises slightly slower for hero feel
 const timerVariants = {
   hidden:  { opacity: 0, y: 30, scale: 0.97 },
   visible: {
@@ -41,6 +40,34 @@ const timerVariants = {
   },
 }
 
+export const QUIZ_STATES = {
+  IDLE: 'IDLE',
+  READY: 'READY',
+  GENERATING: 'GENERATING',
+  OPEN: 'OPEN',
+  ERROR: 'ERROR',
+  SUBMITTING: 'SUBMITTING',
+  RESULT: 'RESULT'
+}
+
+const calculateTargetMinutes = (task, defaultFocus) => {
+  if (!task?.startTime || !task?.endTime) return defaultFocus
+  try {
+    const [h1, m1] = task.startTime.split(':').map(Number)
+    const [h2, m2] = task.endTime.split(':').map(Number)
+    if (!Number.isInteger(h1) || h1 < 0 || h1 > 23 || 
+        !Number.isInteger(m1) || m1 < 0 || m1 > 59 ||
+        !Number.isInteger(h2) || h2 < 0 || h2 > 23 ||
+        !Number.isInteger(m2) || m2 < 0 || m2 > 59) {
+      return defaultFocus
+    }
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1)
+    return diff > 0 ? diff : defaultFocus
+  } catch (e) {
+    return defaultFocus
+  }
+}
+
 const FocusWorkspace = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -49,84 +76,182 @@ const FocusWorkspace = () => {
   const [currentTask, setCurrentTask] = useState(null)
   const [isTaskLoading, setIsTaskLoading] = useState(false)
   const [taskError, setTaskError] = useState(null)
+  
+  const [initData, setInitData] = useState(null)
 
-  // Completion & Quiz state (quiz decoupled in Commit 2)
+  const [quizState, setQuizState] = useState(QUIZ_STATES.IDLE)
   const [quizList, setQuizList] = useState([])
   const [quizError, setQuizError] = useState(null)
-  const [isQuizOpen, setIsQuizOpen] = useState(false)
-  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false)
   const [quizResult, setQuizResult] = useState(null)
   
+  const quizGenerationInFlightRef = useRef(false)
+  const autoQuizTriggeredRef = useRef(false)
+  const workspaceRequestIdRef = useRef(0)
+
+  const handleStartQuizGen = useCallback(async () => {
+    if (!taskId || quizGenerationInFlightRef.current || currentTask?.status === 'COMPLETED' || currentTask?.status === 'done') return;
+    
+    quizGenerationInFlightRef.current = true;
+    setQuizState(QUIZ_STATES.GENERATING);
+    setQuizError(null);
+    
+    try {
+      const generated = await generateQuiz({ taskId });
+      setQuizList(generated);
+      setQuizState(QUIZ_STATES.OPEN);
+    } catch (err) {
+      console.error('Failed to generate quiz:', err);
+      setQuizError(err.message || 'Failed to generate quiz.');
+      setQuizState(QUIZ_STATES.ERROR);
+    } finally {
+      quizGenerationInFlightRef.current = false;
+    }
+  }, [taskId, currentTask]);
+
+  const handleTargetReached = useCallback(() => {
+    if (quizState === QUIZ_STATES.IDLE || quizState === QUIZ_STATES.READY) {
+      if (!autoQuizTriggeredRef.current) {
+        autoQuizTriggeredRef.current = true;
+        handleStartQuizGen();
+      } else {
+        setQuizState(QUIZ_STATES.READY);
+      }
+    }
+  }, [quizState, handleStartQuizGen]);
+
+  const cycle = usePomodoroCycle({ 
+    taskId, 
+    initData, 
+    onTargetReached: handleTargetReached
+  })
+
   const {
-    phase,
-    timeLeft,
-    totalTime,
-    saveError,
-    abortError,
-    abortNotice,
-    isAborting,
-    startFocus,
-    pauseFocus,
-    suspendFocusForAbort,
-    resumeFocus,
-    abortFocus,
-    retrySave,
-    pauseBreak,
-    resumeBreak,
-    skipBreak,
-    startNextFocus
-  } = usePomodoroCycle(taskId)
+    phase, timeLeft, totalTime, saveError, abortError, abortNotice, isAborting,
+    focusedMinutes, remainingMinutes, targetMinutes,
+    startFocus, pauseFocus, suspendFocusForAbort, resumeFocus, abortFocus, retrySave,
+    pauseBreak, resumeBreak, skipBreak, startNextFocus
+  } = cycle
 
   useEffect(() => {
-    const fetchTask = async () => {
-      if (!taskId) return
-      try {
-        setIsTaskLoading(true)
-        setTaskError(null)
-        const taskData = await getTaskById(taskId)
-        setCurrentTask(taskData)
-      } catch (err) {
-        console.error('Failed to fetch task for focus session:', err)
-        setTaskError('Could not load task details. Please return to the dashboard and try again.')
-      } finally {
+    workspaceRequestIdRef.current += 1;
+    setCurrentTask(null);
+    setInitData(null);
+    setTaskError(null);
+    quizGenerationInFlightRef.current = false;
+    autoQuizTriggeredRef.current = false;
+    setQuizState(QUIZ_STATES.IDLE);
+    setQuizList([]);
+    setQuizError(null);
+    setQuizResult(null);
+  }, [taskId]);
+
+  const loadWorkspaceData = useCallback(async () => {
+    if (!taskId) return
+    const currentRequestId = workspaceRequestIdRef.current;
+    try {
+      setIsTaskLoading(true)
+      setTaskError(null)
+      
+      const [taskData, settingsData, logsData] = await Promise.all([
+        getTaskById(taskId),
+        getUserSettings().catch(() => null),
+        getPomodoroLogsByTask(taskId)
+      ])
+      
+      if (currentRequestId !== workspaceRequestIdRef.current) return;
+      
+      setCurrentTask(taskData)
+      
+      const configuredFocusMinutes = settingsData?.pomodoroDuration ?? 25;
+      const configuredBreakMinutes = settingsData?.shortBreakDuration ?? 5;
+      
+      const targetMins = calculateTargetMinutes(taskData, configuredFocusMinutes);
+      
+      const initialFocusedMinutes = logsData
+        .filter(log => log.status === 'COMPLETED')
+        .reduce((sum, log) => {
+          const val = Number(log.focusMinutes);
+          if (Number.isFinite(val) && val > 0) {
+            return sum + val;
+          }
+          return sum;
+        }, 0);
+
+      setInitData({
+        taskId,
+        targetMinutes: targetMins,
+        initialFocusedMinutes,
+        configuredFocusMinutes,
+        configuredBreakMinutes
+      });
+      
+      if (initialFocusedMinutes >= targetMins && targetMins > 0) {
+        setQuizState(QUIZ_STATES.READY);
+        autoQuizTriggeredRef.current = true; // Prevent auto-trigger if already reached
+      }
+
+    } catch (err) {
+      if (currentRequestId !== workspaceRequestIdRef.current) return;
+      console.error('Failed to fetch workspace data:', err)
+      setTaskError('Could not load task details. Please check your connection and try again.')
+    } finally {
+      if (currentRequestId === workspaceRequestIdRef.current) {
         setIsTaskLoading(false)
       }
     }
-    fetchTask()
-  }, [taskId])
+  }, [taskId]);
+
+  useEffect(() => {
+    loadWorkspaceData()
+  }, [loadWorkspaceData])
 
   const handleQuizSubmit = async (answers) => {
-    if (isSubmittingQuiz) return
+    if (quizState === QUIZ_STATES.SUBMITTING) return
     try {
-      setIsSubmittingQuiz(true)
+      setQuizState(QUIZ_STATES.SUBMITTING)
       setQuizError(null)
       const result = await submitQuiz({
         answers,
-        completeTaskAfterSubmit: false // Do not mark task completed in this commit
+        completeTaskAfterSubmit: true
       })
       setQuizResult(result)
+      setQuizState(QUIZ_STATES.RESULT)
     } catch (err) {
       console.error('Failed to submit quiz:', err)
       setQuizError(err.message || 'Failed to submit quiz.')
-    } finally {
-      setIsSubmittingQuiz(false)
+      setQuizState(QUIZ_STATES.OPEN)
     }
   }
 
-  const handleCloseQuiz = () => setIsQuizOpen(false)
+  const handleCloseQuiz = () => {
+    if (quizState === QUIZ_STATES.RESULT) return;
+    setQuizState(QUIZ_STATES.READY);
+  }
   const handleBackToDashboard = () => navigate('/dashboard')
 
-  const isCurrentTaskCompleted =
-    currentTask?.status === 'COMPLETED' || currentTask?.status === 'done'
-
-  const disabled = !currentTask || isTaskLoading || isCurrentTaskCompleted || phase === PHASES.LOADING_SETTINGS || phase === PHASES.SAVING_SESSION || phase === PHASES.SESSION_SAVE_ERROR || isAborting
+  const isCurrentTaskCompleted = currentTask?.status === 'COMPLETED' || currentTask?.status === 'done'
+  const isDataLoading = isTaskLoading || phase === PHASES.PROGRESS_LOADING;
+  const isGeneratingQuiz = quizState === QUIZ_STATES.GENERATING;
+  const disabled = !currentTask || isDataLoading || isCurrentTaskCompleted || phase === PHASES.SAVING_SESSION || phase === PHASES.SESSION_SAVE_ERROR || isAborting || taskError || isGeneratingQuiz;
 
   let statusText = 'Ready when you are'
   let statusColorClass = 'bg-stone-300'
   
-  if (phase === PHASES.LOADING_SETTINGS) {
-    statusText = 'Loading settings...'
+  if (isDataLoading) {
+    statusText = 'Loading progress...'
     statusColorClass = 'bg-stone-300'
+  } else if (taskError) {
+    statusText = 'Data loading failed'
+    statusColorClass = 'bg-rose-500'
+  } else if (isCurrentTaskCompleted) {
+    statusText = 'Task completed'
+    statusColorClass = 'bg-emerald-500'
+  } else if (quizState === QUIZ_STATES.GENERATING) {
+    statusText = 'Generating quiz...'
+    statusColorClass = 'bg-blue-400 animate-pulse-soft'
+  } else if (phase === PHASES.READY_FOR_QUIZ || quizState === QUIZ_STATES.READY || quizState === QUIZ_STATES.ERROR) {
+    statusText = 'Target reached'
+    statusColorClass = 'bg-emerald-400'
   } else if (phase === PHASES.FOCUSING) {
     statusText = 'Session running'
     statusColorClass = 'bg-violet-500 animate-pulse-soft'
@@ -150,11 +275,13 @@ const FocusWorkspace = () => {
     statusColorClass = 'bg-violet-400'
   }
 
+  const isQuizOpen = [QUIZ_STATES.GENERATING, QUIZ_STATES.OPEN, QUIZ_STATES.SUBMITTING, QUIZ_STATES.RESULT].includes(quizState);
+  const isSubmittingQuiz = quizState === QUIZ_STATES.SUBMITTING;
+
   return (
     <div className="relative min-h-screen">
       <FocusDecor/>
 
-      {/* Floating glass top bar — inset-x-0 so it mirrors the max-w-6xl grid below */}
       <motion.nav
         variants={navVariants}
         initial="hidden"
@@ -174,7 +301,6 @@ const FocusWorkspace = () => {
               boxShadow: '0 2px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
             }}
           >
-            {/* Brand */}
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm">
                 <StudyIcon name="layers" size={15} className="text-white"/>
@@ -182,13 +308,11 @@ const FocusWorkspace = () => {
               <span className="text-stone-800 text-base font-bold tracking-tight">StudyFlow</span>
             </div>
 
-            {/* Mode label */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 rounded-full border border-violet-100/80">
               <StudyIcon name="timer" size={12} className="text-violet-500"/>
               <span className="text-xs font-semibold text-violet-700 tracking-wide">Deep Focus</span>
             </div>
 
-            {/* Back to Dashboard */}
             <motion.button
               id="focus-back-btn"
               onClick={() => navigate('/dashboard')}
@@ -203,9 +327,6 @@ const FocusWorkspace = () => {
         </div>
       </motion.nav>
 
-
-      {/* Main content — 3-column on large screens, stacked on small */}
-      {/* pt-24 clears the floating header on all screen sizes */}
       <motion.main
         variants={contentVariants}
         initial="hidden"
@@ -215,17 +336,22 @@ const FocusWorkspace = () => {
       >
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-6 lg:gap-8 items-start">
 
-          {/* Left panel — Current Task */}
           <motion.div
             variants={{
               hidden:  { opacity: 0, x: -20 },
               visible: { opacity: 1, x: 0, transition: { duration: 0.45, ease: 'easeOut', delay: 0.15 } },
             }}
           >
-            <CurrentTaskPanel currentTask={currentTask} isTaskLoading={isTaskLoading} taskError={taskError} />
+            <CurrentTaskPanel 
+              currentTask={currentTask} 
+              isTaskLoading={isDataLoading} 
+              taskError={taskError} 
+              focusedMinutes={focusedMinutes}
+              targetMinutes={targetMinutes}
+              remainingMinutes={remainingMinutes}
+            />
           </motion.div>
 
-          {/* Center — Timer (hero) */}
           <motion.div
             variants={timerVariants}
             className="flex flex-col items-center justify-start gap-4"
@@ -245,9 +371,11 @@ const FocusWorkspace = () => {
               onStartNextFocus={startNextFocus}
               disabled={disabled}
               isAborting={isAborting}
+              quizState={quizState}
+              onStartQuizGen={handleStartQuizGen}
+              isFinalSession={initData && remainingMinutes > 0 && remainingMinutes < initData.configuredFocusMinutes}
             />
 
-            {/* Session mode indicator (visible below the timer on all sizes) */}
             <div className="flex flex-col items-center gap-2 mt-2">
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${statusColorClass}`}/>
@@ -256,6 +384,29 @@ const FocusWorkspace = () => {
                 </span>
               </div>
               
+              {quizState === QUIZ_STATES.ERROR && quizError && (
+                <div className="flex flex-col items-center gap-2 mt-1">
+                  <div className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium rounded-lg text-center max-w-xs">
+                    {quizError}
+                  </div>
+                  <button
+                    onClick={handleStartQuizGen}
+                    className="px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors border border-rose-200"
+                  >
+                    Retry Generate Quiz
+                  </button>
+                </div>
+              )}
+
+              {taskError && (
+                <button
+                  onClick={loadWorkspaceData}
+                  className="mt-1 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors border border-rose-200"
+                >
+                  Retry Loading
+                </button>
+              )}
+
               {phase === PHASES.SESSION_SAVE_ERROR && (
                 <button
                   onClick={retrySave}
@@ -279,7 +430,6 @@ const FocusWorkspace = () => {
             </div>
           </motion.div>
 
-          {/* Right panel — Support */}
           <motion.div
             variants={{
               hidden:  { opacity: 0, x: 20 },

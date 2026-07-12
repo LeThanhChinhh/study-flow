@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { savePomodoroLog } from '../../api/pomodoroApi';
-import { getUserSettings } from '../../api/userSettingsApi';
 
 // Phases of the Pomodoro cycle
 export const PHASES = {
-  LOADING_SETTINGS: 'LOADING_SETTINGS',
+  PROGRESS_LOADING: 'PROGRESS_LOADING',
   IDLE: 'IDLE',
   FOCUSING: 'FOCUSING',
   FOCUS_PAUSED: 'FOCUS_PAUSED',
@@ -13,19 +12,16 @@ export const PHASES = {
   BREAKING: 'BREAKING',
   BREAK_PAUSED: 'BREAK_PAUSED',
   READY_FOR_NEXT_FOCUS: 'READY_FOR_NEXT_FOCUS',
+  READY_FOR_QUIZ: 'READY_FOR_QUIZ',
 };
 
-const DEFAULT_FOCUS_MINUTES = 25;
-const DEFAULT_BREAK_MINUTES = 5;
-
-export function usePomodoroCycle(taskId) {
-  const [phase, setPhase] = useState(PHASES.LOADING_SETTINGS);
+export function usePomodoroCycle({ taskId, initData, onTargetReached }) {
+  const [phase, setPhase] = useState(PHASES.PROGRESS_LOADING);
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
-  const [focusDuration, setFocusDuration] = useState(DEFAULT_FOCUS_MINUTES * 60);
-  const [breakDuration, setBreakDuration] = useState(DEFAULT_BREAK_MINUTES * 60);
   const [pauseCount, setPauseCount] = useState(0);
-  
+  const [focusedMinutes, setFocusedMinutes] = useState(0);
+
   const [saveError, setSaveError] = useState(null);
   const [abortError, setAbortError] = useState(null);
   const [abortNotice, setAbortNotice] = useState(null);
@@ -35,8 +31,12 @@ export function usePomodoroCycle(taskId) {
   const isSavingRef = useRef(false);
   const completionHandledRef = useRef(false);
   const breakCompletionHandledRef = useRef(false);
+  
+  const initializedTaskIdRef = useRef(null);
 
-  // Clear any running interval
+  const targetMinutes = initData?.targetMinutes || 0;
+  const remainingMinutes = Math.max(targetMinutes - focusedMinutes, 0);
+
   const clearTick = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -44,40 +44,46 @@ export function usePomodoroCycle(taskId) {
     }
   }, []);
 
-  // Fetch settings on mount
+  // Initialize or reset when taskId changes or initData arrives
   useEffect(() => {
-    let isMounted = true;
-    const fetchSettings = async () => {
-      try {
-        const settings = await getUserSettings();
-        if (!isMounted) return;
-        
-        const focusMins = settings?.pomodoroDuration ?? DEFAULT_FOCUS_MINUTES;
-        const breakMins = settings?.shortBreakDuration ?? DEFAULT_BREAK_MINUTES;
-
-        setFocusDuration(focusMins * 60);
-        setBreakDuration(breakMins * 60);
-        
-        setTimeLeft(focusMins * 60);
-        setTotalTime(focusMins * 60);
-        setPhase(PHASES.IDLE);
-      } catch (error) {
-        console.error('Failed to load user settings, using defaults.', error);
-        if (isMounted) {
-          setFocusDuration(DEFAULT_FOCUS_MINUTES * 60);
-          setBreakDuration(DEFAULT_BREAK_MINUTES * 60);
-          setTimeLeft(DEFAULT_FOCUS_MINUTES * 60);
-          setTotalTime(DEFAULT_FOCUS_MINUTES * 60);
-          setPhase(PHASES.IDLE);
-        }
-      }
-    };
-    fetchSettings();
-    return () => {
-      isMounted = false;
+    if (!taskId) {
       clearTick();
-    };
-  }, [clearTick]);
+      setPhase(PHASES.PROGRESS_LOADING);
+      initializedTaskIdRef.current = null;
+      return;
+    }
+
+    if (!initData || initData.taskId !== taskId) {
+      clearTick();
+      setPhase(PHASES.PROGRESS_LOADING);
+      // Wait for correct data
+      return;
+    }
+
+    if (initializedTaskIdRef.current !== taskId) {
+      initializedTaskIdRef.current = taskId;
+      setFocusedMinutes(initData.initialFocusedMinutes);
+      
+      const initialRemaining = Math.max(initData.targetMinutes - initData.initialFocusedMinutes, 0);
+      
+      if (initialRemaining <= 0) {
+        setPhase(PHASES.READY_FOR_QUIZ);
+        setTimeLeft(0);
+        setTotalTime(0);
+      } else {
+        setPhase(PHASES.IDLE);
+        const nextMin = Math.min(initData.configuredFocusMinutes, initialRemaining);
+        setTimeLeft(nextMin * 60);
+        setTotalTime(nextMin * 60);
+      }
+      setPauseCount(0);
+      setSaveError(null);
+      setAbortError(null);
+      setAbortNotice(null);
+      completionHandledRef.current = false;
+      breakCompletionHandledRef.current = false;
+    }
+  }, [taskId, initData, clearTick]);
 
   // Clean up interval on unmount
   useEffect(() => {
@@ -103,41 +109,58 @@ export function usePomodoroCycle(taskId) {
     if (phase === PHASES.BREAKING && timeLeft === 0 && !breakCompletionHandledRef.current) {
       breakCompletionHandledRef.current = true;
       setPhase(PHASES.READY_FOR_NEXT_FOCUS);
+      // Reset timer to next session length
+      const nextMin = Math.min(initData?.configuredFocusMinutes || 25, remainingMinutes);
+      setTimeLeft(nextMin * 60);
+      setTotalTime(nextMin * 60);
     }
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, initData, remainingMinutes]);
 
   // Action: Complete Focus Session
   const handleFocusComplete = useCallback(async () => {
-    if (!taskId || isSavingRef.current) return;
+    if (!taskId || !initData || isSavingRef.current) return;
     
     clearTick();
     setPhase(PHASES.SAVING_SESSION);
     setSaveError(null);
     isSavingRef.current = true;
 
+    // Use totalTime to calculate currentSessionMinutes because final session might be shortened
+    const currentSessionMinutes = Math.round(totalTime / 60);
+
     try {
-      // NOTE: backend limitation for Commit 2: passing breakMinutes as 0
       await savePomodoroLog({
         taskId,
-        focusMinutes: Math.round(focusDuration / 60),
+        focusMinutes: currentSessionMinutes,
         breakMinutes: 0,
         pauseCount,
         status: 'COMPLETED'
       });
       
-      // Successfully saved -> transition to break
+      // Successfully saved
       isSavingRef.current = false;
-      setPhase(PHASES.BREAKING);
-      setTimeLeft(breakDuration);
-      setTotalTime(breakDuration);
-      startBreakTick();
+      
+      const newFocusedMinutes = focusedMinutes + currentSessionMinutes;
+      setFocusedMinutes(newFocusedMinutes);
+      
+      const newRemaining = Math.max(initData.targetMinutes - newFocusedMinutes, 0);
+
+      if (newRemaining <= 0) {
+        setPhase(PHASES.READY_FOR_QUIZ);
+        onTargetReached?.();
+      } else {
+        setPhase(PHASES.BREAKING);
+        setTimeLeft(initData.configuredBreakMinutes * 60);
+        setTotalTime(initData.configuredBreakMinutes * 60);
+        startBreakTick();
+      }
     } catch (err) {
       console.error('Failed to save completed session', err);
       isSavingRef.current = false;
       setSaveError(err?.message || 'Failed to save session.');
       setPhase(PHASES.SESSION_SAVE_ERROR);
     }
-  }, [taskId, focusDuration, pauseCount, breakDuration, clearTick, startBreakTick]);
+  }, [taskId, initData, pauseCount, clearTick, startBreakTick, totalTime, focusedMinutes, onTargetReached]);
 
   // Handle completion side effect when timer hits 0
   useEffect(() => {
@@ -170,14 +193,15 @@ export function usePomodoroCycle(taskId) {
 
   // Public Actions
   const startFocus = useCallback(() => {
-    if (!taskId) return;
+    if (!taskId || !initData || remainingMinutes <= 0) return;
+    
     setAbortError(null);
     setAbortNotice(null);
     completionHandledRef.current = false;
     breakCompletionHandledRef.current = false;
     setPhase(PHASES.FOCUSING);
     startFocusTick();
-  }, [taskId, startFocusTick]);
+  }, [taskId, initData, startFocusTick, remainingMinutes]);
 
   const pauseFocus = useCallback(() => {
     clearTick();
@@ -188,7 +212,6 @@ export function usePomodoroCycle(taskId) {
   const suspendFocusForAbort = useCallback(() => {
     clearTick();
     setPhase(PHASES.FOCUS_PAUSED);
-    // Does NOT increment pauseCount
   }, [clearTick]);
 
   const resumeFocus = useCallback(() => {
@@ -199,22 +222,20 @@ export function usePomodoroCycle(taskId) {
   }, [startFocusTick]);
 
   const abortFocus = useCallback(async () => {
-    if (!taskId || isAborting) return;
+    if (!taskId || !initData || isAborting) return;
     clearTick();
     setIsAborting(true);
     setAbortError(null);
     setAbortNotice(null);
     
-    // Calculate actual elapsed minutes for the ABORTED log
-    const elapsedSeconds = focusDuration - timeLeft;
+    const elapsedSeconds = totalTime - timeLeft;
     const elapsedMinutes = Math.max(0, Math.floor(elapsedSeconds / 60));
 
     if (elapsedMinutes < 1) {
       setAbortNotice("Session ended before one full minute, so it was not added to your history.");
       setIsAborting(false);
       setPhase(PHASES.IDLE);
-      setTimeLeft(focusDuration);
-      setTotalTime(focusDuration);
+      setTimeLeft(totalTime);
       setPauseCount(0);
       return;
     }
@@ -229,19 +250,16 @@ export function usePomodoroCycle(taskId) {
       });
       
       setIsAborting(false);
-      // Reset to ready
-      setPhase(PHASES.IDLE); // IDLE state resets timer in effect below
-      setTimeLeft(focusDuration);
-      setTotalTime(focusDuration);
+      setPhase(PHASES.IDLE); 
+      setTimeLeft(totalTime);
       setPauseCount(0);
     } catch (err) {
       console.error('Failed to log aborted session', err);
       setIsAborting(false);
       setAbortError(err?.message || 'Failed to end session.');
-      // Stay in FOCUS_PAUSED so user can retry or resume
       setPhase(PHASES.FOCUS_PAUSED);
     }
-  }, [taskId, clearTick, focusDuration, timeLeft, pauseCount, isAborting]);
+  }, [taskId, initData, clearTick, totalTime, timeLeft, pauseCount, isAborting]);
 
   const pauseBreak = useCallback(() => {
     clearTick();
@@ -256,31 +274,25 @@ export function usePomodoroCycle(taskId) {
   const skipBreak = useCallback(() => {
     clearTick();
     setPhase(PHASES.READY_FOR_NEXT_FOCUS);
-  }, [clearTick]);
+    const nextMin = Math.min(initData?.configuredFocusMinutes || 25, remainingMinutes);
+    setTimeLeft(nextMin * 60);
+    setTotalTime(nextMin * 60);
+  }, [clearTick, initData, remainingMinutes]);
 
   const startNextFocus = useCallback(() => {
-    if (!taskId) return;
+    if (!taskId || !initData || remainingMinutes <= 0) return;
     setAbortError(null);
     setAbortNotice(null);
     completionHandledRef.current = false;
     breakCompletionHandledRef.current = false;
     setPhase(PHASES.FOCUSING);
-    setTimeLeft(focusDuration);
-    setTotalTime(focusDuration);
+    
+    const nextMin = Math.min(initData.configuredFocusMinutes, remainingMinutes);
+    setTimeLeft(nextMin * 60);
+    setTotalTime(nextMin * 60);
     setPauseCount(0);
     startFocusTick();
-  }, [taskId, focusDuration, startFocusTick]);
-  
-  // When switching task in UI while IDLE or READY, we might want to reset
-  useEffect(() => {
-    if (phase === PHASES.IDLE || phase === PHASES.READY_FOR_NEXT_FOCUS) {
-        setTimeLeft(focusDuration);
-        setTotalTime(focusDuration);
-        setPauseCount(0);
-        completionHandledRef.current = false;
-        breakCompletionHandledRef.current = false;
-    }
-  }, [taskId, phase, focusDuration]);
+  }, [taskId, initData, remainingMinutes, startFocusTick]);
 
   return {
     phase,
@@ -290,6 +302,10 @@ export function usePomodoroCycle(taskId) {
     abortError,
     abortNotice,
     isAborting,
+    
+    focusedMinutes,
+    remainingMinutes,
+    targetMinutes,
     
     startFocus,
     pauseFocus,

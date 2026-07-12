@@ -30,6 +30,9 @@ const FocusTimer = ({
   onStartNextFocus,
   disabled,
   isAborting,
+  quizState,
+  onStartQuizGen,
+  isFinalSession,
 }) => {
   const [showAbortConfirm, setShowAbortConfirm] = useState(false)
   const [wasFocusingBeforeAbort, setWasFocusingBeforeAbort] = useState(false)
@@ -42,7 +45,8 @@ const FocusTimer = ({
   const isSaving = phase === PHASES.SAVING_SESSION || phase === PHASES.SESSION_SAVE_ERROR
   const isBreaking = phase === PHASES.BREAKING
   const isBreakPaused = phase === PHASES.BREAK_PAUSED
-  const isReady = phase === PHASES.IDLE || phase === PHASES.READY_FOR_NEXT_FOCUS || phase === PHASES.LOADING_SETTINGS
+  const isReadyForQuiz = phase === PHASES.READY_FOR_QUIZ || quizState === 'READY'
+  const isReady = phase === PHASES.IDLE || phase === PHASES.READY_FOR_NEXT_FOCUS || phase === PHASES.PROGRESS_LOADING || phase === 'LOADING_SETTINGS'
 
   const prevIsAborting = useRef(isAborting)
   useEffect(() => {
@@ -278,8 +282,23 @@ const FocusTimer = ({
           </motion.div>
         ) : (
           <>
+            {/* Start Quiz (when READY_FOR_QUIZ) */}
+            {isReadyForQuiz && (
+              <motion.button
+                onClick={disabled ? undefined : onStartQuizGen}
+                disabled={disabled}
+                whileTap={!disabled ? { scale: 0.95 } : {}}
+                whileHover={!disabled ? { scale: 1.03 } : {}}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                className={`flex items-center gap-2 px-7 py-3 ${disabled ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-600 hover:to-emerald-500 text-white'} font-semibold text-sm rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 transition-colors duration-150`}
+              >
+                <StudyIcon name="zap" size={14} strokeWidth={2.5}/>
+                Start recall quiz
+              </motion.button>
+            )}
+
             {/* Start Focus (when IDLE or READY) */}
-            {isReady && (
+            {isReady && !isReadyForQuiz && (
               <motion.button
                 onClick={disabled ? undefined : (phase === PHASES.READY_FOR_NEXT_FOCUS ? onStartNextFocus : onStartFocus)}
                 disabled={disabled}
@@ -394,7 +413,9 @@ const FocusTimer = ({
 
       {/* Mode label */}
       <p className="text-xs text-stone-400 -mt-4">
-        {isBreaking || isBreakPaused ? `Break · ${Math.max(1, Math.round(totalTime / 60))} min session` : `Pomodoro · ${Math.max(1, Math.round(totalTime / 60))} min session`}
+        {isBreaking || isBreakPaused 
+          ? `Break · ${Math.max(1, Math.round(totalTime / 60))} min session` 
+          : `Pomodoro · ${Math.max(1, Math.round(totalTime / 60))} min session${isFinalSession ? ' (Final)' : ''}`}
       </p>
     </div>
   )
