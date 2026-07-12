@@ -16,6 +16,49 @@ const TASK_STATUS_COLORS = {
   COMPLETED: 'bg-emerald-100 text-emerald-700 line-through opacity-80',
 };
 
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  const parts = dateString.split('-');
+  if (parts.length !== 3) return null;
+  const [year, month, day] = parts.map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  const date = new Date(year, month - 1, day);
+  if (isNaN(date.getTime())) return null;
+  return date;
+};
+
+const formatDateToShort = (dateString) => {
+  const date = parseLocalDate(dateString);
+  if (!date) return dateString || '';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getDeadlineContext = (goal) => {
+  if (goal.status === 'COMPLETED') {
+    return { label: 'Completed', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+  }
+  
+  const deadlineDate = parseLocalDate(goal.deadline);
+  if (!deadlineDate) {
+    return { label: 'No deadline', color: 'text-stone-500 bg-stone-50 border-stone-200' };
+  }
+
+  const today = new Date();
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const diffTime = deadlineDate.getTime() - todayLocal.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return { label: 'Due today', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+  } else if (diffDays > 0) {
+    return { label: `${diffDays} day${diffDays > 1 ? 's' : ''} remaining`, color: 'text-violet-700 bg-violet-50 border-violet-200' };
+  } else {
+    const overdueDays = Math.abs(diffDays);
+    return { label: `${overdueDays} day${overdueDays > 1 ? 's' : ''} overdue`, color: 'text-rose-700 bg-rose-50 border-rose-200' };
+  }
+};
+
 const GoalOverviewModal = ({ onClose }) => {
   const navigate = useNavigate();
   const [goals, setGoals] = useState([]);
@@ -139,11 +182,24 @@ const GoalOverviewModal = ({ onClose }) => {
                             {goal.status.replace('_', ' ')}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-stone-500">
-                          <span className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-3 text-xs">
+                          <span className="flex items-center gap-1.5 text-stone-500">
                             <StudyIcon name="calendar" size={12} />
-                            {goal.startDate} → {goal.deadline}
+                            {formatDateToShort(goal.startDate) || 'No start date'} → {formatDateToShort(goal.deadline) || 'No deadline'}
                           </span>
+                          
+                          {(() => {
+                            const context = getDeadlineContext(goal);
+                            return (
+                              <span 
+                                className={`flex items-center gap-1.5 px-2 py-0.5 rounded border font-medium ${context.color}`}
+                                aria-label={`Deadline status: ${context.label}`}
+                              >
+                                <StudyIcon name="clock" size={12} />
+                                <span>{context.label}</span>
+                              </span>
+                            );
+                          })()}
                         </div>
                       </button>
 
