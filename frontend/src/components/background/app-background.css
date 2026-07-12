@@ -1,0 +1,388 @@
+.app-background {
+  --sf-bg: #f8f6f1;
+  --sf-line: #7c3aed;
+  --sf-line-soft: rgba(124, 58, 237, 0.12);
+  --sf-dot: rgba(92, 73, 121, 0.12);
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  isolation: isolate;
+}
+
+.app-background--planning {
+  --sf-bg: #f8f6f2;
+  --sf-line: #6d5bd0;
+  --sf-line-soft: rgba(99, 102, 241, 0.13);
+  --sf-dot: rgba(89, 74, 130, 0.12);
+}
+
+.app-background--calendar {
+  --sf-bg: #f7f7f3;
+  --sf-line: #6656c7;
+  --sf-line-soft: rgba(79, 70, 229, 0.12);
+  --sf-dot: rgba(76, 82, 122, 0.12);
+}
+
+.app-background--focus {
+  --sf-bg: #f8f6f2;
+  --sf-line: #8b5b8f;
+  --sf-line-soft: rgba(190, 24, 93, 0.09);
+  --sf-dot: rgba(112, 77, 105, 0.11);
+}
+
+.app-background--auth {
+  --sf-bg: #faf8f4;
+  --sf-line: #7057c8;
+  --sf-line-soft: rgba(124, 58, 237, 0.11);
+  --sf-dot: rgba(100, 81, 126, 0.11);
+}
+
+.app-background__base {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, 0.56), transparent 28%),
+    linear-gradient(310deg, rgba(237, 233, 254, 0.34), transparent 31%),
+    linear-gradient(180deg, var(--sf-bg) 0%, #f6f4ef 100%);
+}
+
+.app-background__base::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.23;
+  background-image:
+    linear-gradient(rgba(120, 113, 108, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 113, 108, 0.06) 1px, transparent 1px);
+  background-size: 92px 92px;
+  mask-image: linear-gradient(to bottom, transparent, black 18%, black 80%, transparent);
+}
+
+.app-background__flow-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--sf-line);
+}
+
+.app-background__pattern-dot {
+  fill: var(--sf-dot);
+}
+
+.app-background__flow-lines path {
+  fill: none;
+  stroke: var(--sf-line-soft);
+  stroke-width: 1.15;
+  stroke-dasharray: 8 10;
+}
+
+.app-background__flow-line--accent path {
+  stroke-width: 1.5;
+  stroke-dasharray: 2 8;
+  stroke-linecap: round;
+}
+
+.app-background__micro-marks {
+  fill: currentColor;
+  opacity: 0.18;
+}
+
+.app-background__study-loop {
+  color: var(--sf-line);
+  opacity: 0.2;
+}
+
+.app-background__study-loop path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-dasharray: 5 6;
+}
+
+.app-background__study-loop circle {
+  fill: var(--sf-bg);
+  stroke: currentColor;
+  stroke-width: 1.25;
+}
+
+.app-background__icon-node {
+  position: absolute;
+  left: var(--node-x);
+  top: var(--node-y);
+  width: var(--node-size);
+  height: var(--node-size);
+  transform: translate(-50%, -50%) rotate(var(--node-rotate));
+  color: #6d5bd0;
+}
+
+.app-background__icon-node--violet { color: #7c3aed; }
+.app-background__icon-node--indigo { color: #4f46e5; }
+.app-background__icon-node--rose { color: #e05b7d; }
+.app-background__icon-node--emerald { color: #18866b; }
+.app-background__icon-node--amber { color: #c57a16; }
+
+.app-background__icon-node--primary {
+  opacity: 0.44;
+}
+
+.app-background__icon-node--secondary {
+  opacity: 0.3;
+}
+
+.app-background__icon-shell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 15px;
+  background: color-mix(in srgb, currentColor 7%, rgba(255, 255, 255, 0.72));
+  box-shadow:
+    0 12px 34px color-mix(in srgb, currentColor 8%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.app-background__icon-node--primary .app-background__icon-shell::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 10px;
+}
+
+.app-background__icon-ring {
+  position: absolute;
+  inset: -13px;
+  border: 1px dashed color-mix(in srgb, currentColor 27%, transparent);
+  border-radius: 50%;
+}
+
+.app-background__icon-node--secondary .app-background__icon-ring {
+  inset: -9px;
+}
+
+.app-background__node-pin {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.app-background__node-pin--one {
+  top: -10px;
+  right: -5px;
+}
+
+.app-background__node-pin--two {
+  left: -7px;
+  bottom: -8px;
+  width: 3px;
+  height: 3px;
+  opacity: 0.75;
+}
+
+.app-background__detail-cluster {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sf-line);
+  opacity: 0.19;
+}
+
+.app-background__detail-cluster--top-left {
+  top: 8%;
+  left: 37%;
+}
+
+.app-background__detail-cluster--bottom-right {
+  right: 34%;
+  bottom: 8%;
+  transform: rotate(180deg);
+}
+
+.app-background__detail-line {
+  width: 42px;
+  height: 1px;
+  border-top: 1px dashed currentColor;
+}
+
+.app-background__detail-line--short {
+  width: 23px;
+}
+
+.app-background__detail-dot {
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.app-background__detail-dot--large {
+  width: 9px;
+  height: 9px;
+  box-shadow: inset 0 0 0 2px var(--sf-bg);
+  background: currentColor;
+}
+
+.app-background__detail-dot--small {
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+}
+
+.app-background__edge-label {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--sf-line);
+  opacity: 0.16;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+}
+
+.app-background__edge-label i {
+  display: block;
+  width: 42px;
+  border-top: 1px solid currentColor;
+}
+
+.app-background__edge-label--left {
+  left: 20px;
+  top: 49%;
+  transform: rotate(-90deg) translateX(-50%);
+  transform-origin: left center;
+}
+
+.app-background__edge-label--right {
+  right: 20px;
+  top: 49%;
+  transform: rotate(90deg) translateX(50%);
+  transform-origin: right center;
+}
+
+.app-background__mini-calendar {
+  position: absolute;
+  right: 15%;
+  top: 10%;
+  width: 58px;
+  height: 48px;
+  padding: 9px;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.3);
+  opacity: 0.48;
+  transform: rotate(5deg);
+}
+
+.app-background__mini-calendar-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.app-background__mini-calendar-head span {
+  width: 5px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.4);
+}
+
+.app-background__mini-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.app-background__mini-calendar-grid span {
+  width: 5px;
+  height: 5px;
+  border-radius: 2px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+.app-background__mini-calendar-grid span.is-active {
+  border-color: rgba(124, 58, 237, 0.5);
+  background: rgba(124, 58, 237, 0.22);
+}
+
+.app-background__planning-stack {
+  position: absolute;
+  left: 13%;
+  bottom: 11%;
+  width: 74px;
+  display: grid;
+  gap: 6px;
+  opacity: 0.28;
+  transform: rotate(-5deg);
+}
+
+.app-background__planning-stack span {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.app-background__planning-stack span:nth-child(2) { width: 86%; }
+.app-background__planning-stack span:nth-child(3) { width: 68%; }
+.app-background__planning-stack span:nth-child(4) { width: 46%; }
+
+.app-background--focus .app-background__mini-calendar,
+.app-background--auth .app-background__planning-stack {
+  display: none;
+}
+
+.app-background--calendar .app-background__planning-stack {
+  opacity: 0.18;
+}
+
+@media (max-width: 1024px) {
+  .app-background__icon-node--secondary,
+  .app-background__edge-label,
+  .app-background__study-loop,
+  .app-background__detail-cluster,
+  .app-background__mini-calendar,
+  .app-background__planning-stack {
+    display: none;
+  }
+
+  .app-background__icon-node--primary {
+    opacity: 0.31;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-background__base::after {
+    background-size: 72px 72px;
+    opacity: 0.18;
+  }
+
+  .app-background__flow-lines path:nth-child(n + 3),
+  .app-background__flow-line--accent {
+    display: none;
+  }
+
+  .app-background__icon-node--primary {
+    opacity: 0.22;
+  }
+
+  .app-background__icon-node--primary:nth-of-type(even) {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .app-background {
+    opacity: 0.55;
+  }
+}

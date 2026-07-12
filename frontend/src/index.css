@@ -275,3 +275,9 @@
 .calendar-day-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.3);
 }
+/* Respect reduced-motion preferences without changing normal app motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

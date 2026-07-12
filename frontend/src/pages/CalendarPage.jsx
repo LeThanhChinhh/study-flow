@@ -7,7 +7,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
+import AppBackground from '../components/background/AppBackground'
 import {
   DayColumn,
   WeekNavHeader,
@@ -298,7 +298,7 @@ const CalendarPage = () => {
 
   return (
     <div className="min-h-screen">
-      <StudyOrbitBackdrop />
+      <AppBackground variant="calendar" />
 
       {/*  Top navigation bar  */}
       <nav className="nav-glass sticky top-0 z-20">
