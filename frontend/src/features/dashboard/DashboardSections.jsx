@@ -471,10 +471,17 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
 )
 
 /* Study Streak card */
-export const StudyStreakCard = ({ user }) => {
-  const currentStreak = user?.currentStreak || 0
-  const highestStreak = user?.highestStreak || 0
-  
+export const StudyStreakCard = ({
+  currentStreak = 0,
+  highestStreak = 0,
+  studiedToday = false,
+  totalStudyDays = 0,
+  isLoading = false,
+  error = null,
+  onRetry
+}) => {
+  const bestLabel = `${highestStreak} ${highestStreak === 1 ? 'day' : 'days'}`
+
   return (
     <section aria-label="Study streak" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full">
       {/* Subtle amber warmth glow */}
@@ -485,23 +492,50 @@ export const StudyStreakCard = ({ user }) => {
       />
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative z-10">
         <IconBadge name="flame" bg="bg-amber-50" icon="text-amber-500" badgeSize="w-9 h-9" />
         <div>
           <h2 className="text-sm font-semibold text-stone-800">Study Streak</h2>
-          <p className="text-xs text-stone-400 mt-0.5">Best: {highestStreak} days</p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            {isLoading ? 'Calculating streak...' : `Best: ${bestLabel}`}
+          </p>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center">
-        {currentStreak > 0 ? (
-          <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold text-stone-800 tracking-tight">{currentStreak}</span>
-            <span className="text-base font-medium text-stone-500">day streak</span>
+      <div className="flex-1 flex flex-col justify-center relative z-10">
+        {isLoading ? (
+          <div className="space-y-3 animate-pulse" aria-label="Loading study streak">
+            <div className="h-12 w-28 rounded-xl bg-stone-100" />
+            <div className="h-3 w-44 rounded bg-stone-100" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-stone-500">Could not calculate your study streak.</p>
+            {onRetry && (
+              <button type="button" onClick={onRetry} className="btn-ghost text-xs px-3 py-1.5">
+                <StudyIcon name="refresh-cw" size={12} />
+                Retry
+              </button>
+            )}
+          </div>
+        ) : currentStreak > 0 ? (
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-bold text-stone-800 tracking-tight">{currentStreak}</span>
+              <span className="text-base font-medium text-stone-500">day streak</span>
+            </div>
+            <p className="text-xs text-stone-400 mt-3">
+              {studiedToday
+                ? 'Today is counted. Keep the rhythm going tomorrow.'
+                : 'Complete a focus session today to keep it going.'}
+            </p>
           </div>
         ) : (
-          <div className="text-center py-4">
-            <p className="text-sm text-stone-500">Streak tracking will appear after completed focus sessions.</p>
+          <div className="py-2">
+            <p className="text-sm font-medium text-stone-600">
+              {totalStudyDays > 0 ? 'Start a new streak today.' : 'Complete a focus session to start your streak.'}
+            </p>
+            <p className="text-xs text-stone-400 mt-1.5">Only completed focus sessions count.</p>
           </div>
         )}
       </div>
