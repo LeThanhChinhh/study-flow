@@ -93,39 +93,59 @@ const FocusHistoryCard = ({
 
     const weekChart = DAYS.map((d, i) => ({ day: d, fullDay: FULL_DAYS[i], minutes: 0 }))
 
-    const validLogs = logs.map(log => {
-      const ts = log.endTime || log.startTime || log.createdAt
-      return {
-        ...log,
-        timestamp: ts ? new Date(ts).getTime() : 0,
-        taskTitle: taskMap.get(log.taskId) || (log.taskId ? 'Deleted task' : 'Study session')
-      }
-    }).filter(log => log.timestamp > 0)
-
-    for (const log of validLogs) {
-      if (log.status === 'COMPLETED') {
-        const focusMins = Number.isFinite(log.focusMinutes) && log.focusMinutes > 0 ? log.focusMinutes : 0
-        
-        // This week
-        if (log.timestamp >= startOfWeek.getTime() && log.timestamp < endOfWeek.getTime()) {
-          completedCountThisWeek++
-          totalMins += focusMins
-          if (log.taskId) {
-            uniqueTasks.add(log.taskId)
-          }
-          const logDate = new Date(log.timestamp)
-          const dayIndex = (logDate.getDay() + 6) % 7 // Mon=0, Sun=6
-          weekChart[dayIndex].minutes += focusMins
+    const mappedLogs = logs
+      .filter(log => log.status === 'COMPLETED')
+      .map(log => {
+        const ts = log.endTime || log.startTime || log.createdAt
+        return {
+          ...log,
+          timestamp: ts ? new Date(ts).getTime() : 0,
+          taskTitle: taskMap.get(log.taskId) || (log.taskId ? 'Deleted task' : 'Study session')
         }
+      })
+      .filter(log => log.timestamp > 0)
 
-        // Last week
-        if (log.timestamp >= startOfLastWeek.getTime() && log.timestamp < startOfWeek.getTime()) {
-          completedCountLastWeek++
+    // Deduplicate by clientSessionId, fallback to id
+    const dedupedMap = new Map()
+    for (const log of mappedLogs) {
+      const key = log.clientSessionId || log.id
+      if (!dedupedMap.has(key)) {
+        dedupedMap.set(key, log)
+      } else {
+        // Keep the newest timestamp if duplicate
+        if (log.timestamp > dedupedMap.get(key).timestamp) {
+          dedupedMap.set(key, log)
         }
       }
     }
 
-    const recent = [...validLogs].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5)
+    const validLogs = Array.from(dedupedMap.values()).sort((a, b) => {
+      if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+      return (b.id || '').localeCompare(a.id || '');
+    });
+
+    for (const log of validLogs) {
+      const focusMins = Number.isFinite(log.focusMinutes) && log.focusMinutes > 0 ? log.focusMinutes : 0
+      
+      // This week
+      if (log.timestamp >= startOfWeek.getTime() && log.timestamp < endOfWeek.getTime()) {
+        completedCountThisWeek++
+        totalMins += focusMins
+        if (log.taskId) {
+          uniqueTasks.add(log.taskId)
+        }
+        const logDate = new Date(log.timestamp)
+        const dayIndex = (logDate.getDay() + 6) % 7 // Mon=0, Sun=6
+        weekChart[dayIndex].minutes += focusMins
+      }
+
+      // Last week
+      if (log.timestamp >= startOfLastWeek.getTime() && log.timestamp < startOfWeek.getTime()) {
+        completedCountLastWeek++
+      }
+    }
+
+    const recent = validLogs.slice(0, 5)
 
     let insightText = 'Same rhythm as last week'
     let type = 'neutral'

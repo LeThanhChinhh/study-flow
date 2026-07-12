@@ -11,6 +11,7 @@ import FocusTimer from './FocusTimer'
 import { CurrentTaskPanel, SupportPanel } from './FocusPanels'
 import QuizModal from './QuizModal'
 import { usePomodoroCycle, PHASES } from './usePomodoroCycle'
+import { usePersistedPomodoroSession } from './usePersistedPomodoroSession'
 
 const contentVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -78,6 +79,10 @@ const FocusWorkspace = () => {
   const [taskError, setTaskError] = useState(null)
   
   const [initData, setInitData] = useState(null)
+  const [serverLogs, setServerLogs] = useState(null)
+  const [showTaskSwitchConfirm, setShowTaskSwitchConfirm] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const { hasActiveSessionForOtherTask, clearSession } = usePersistedPomodoroSession()
 
   const [quizState, setQuizState] = useState(QUIZ_STATES.IDLE)
   const [quizList, setQuizList] = useState([])
@@ -108,6 +113,8 @@ const FocusWorkspace = () => {
     }
   }, [taskId, currentTask]);
 
+
+
   const handleTargetReached = useCallback(() => {
     if (quizState === QUIZ_STATES.IDLE || quizState === QUIZ_STATES.READY) {
       if (!autoQuizTriggeredRef.current) {
@@ -119,34 +126,9 @@ const FocusWorkspace = () => {
     }
   }, [quizState, handleStartQuizGen]);
 
-  const cycle = usePomodoroCycle({ 
-    taskId, 
-    initData, 
-    onTargetReached: handleTargetReached
-  })
-
-  const {
-    phase, timeLeft, totalTime, saveError, abortError, abortNotice, isAborting,
-    focusedMinutes, remainingMinutes, targetMinutes,
-    startFocus, pauseFocus, suspendFocusForAbort, resumeFocus, abortFocus, retrySave,
-    pauseBreak, resumeBreak, skipBreak, startNextFocus
-  } = cycle
-
-  useEffect(() => {
-    workspaceRequestIdRef.current += 1;
-    setCurrentTask(null);
-    setInitData(null);
-    setTaskError(null);
-    quizGenerationInFlightRef.current = false;
-    autoQuizTriggeredRef.current = false;
-    setQuizState(QUIZ_STATES.IDLE);
-    setQuizList([]);
-    setQuizError(null);
-    setQuizResult(null);
-  }, [taskId]);
-
   const loadWorkspaceData = useCallback(async () => {
     if (!taskId) return
+    workspaceRequestIdRef.current += 1;
     const currentRequestId = workspaceRequestIdRef.current;
     try {
       setIsTaskLoading(true)
@@ -184,6 +166,7 @@ const FocusWorkspace = () => {
         configuredFocusMinutes,
         configuredBreakMinutes
       });
+      setServerLogs(logsData);
       
       if (initialFocusedMinutes >= targetMins && targetMins > 0) {
         setQuizState(QUIZ_STATES.READY);
@@ -199,6 +182,53 @@ const FocusWorkspace = () => {
         setIsTaskLoading(false)
       }
     }
+  }, [taskId]);
+
+  const handleDiscard = useCallback(() => {
+    loadWorkspaceData()
+  }, [loadWorkspaceData])
+
+  const cycle = usePomodoroCycle({ 
+    taskId, 
+    initData,
+    serverLogs,
+    onTargetReached: handleTargetReached,
+    onDiscard: handleDiscard
+  })
+
+  const {
+    phase, timeLeft, totalTime, saveError, abortError, abortNotice, isAborting,
+    focusedMinutes, remainingMinutes, targetMinutes,
+    startFocus, pauseFocus, suspendFocusForAbort, resumeFocus, abortFocus, retrySave, discardSession,
+    pauseBreak, resumeBreak, skipBreak, startNextFocus
+  } = cycle
+
+  const handleStartFocus = useCallback(() => {
+    if (hasActiveSessionForOtherTask(taskId)) {
+      setShowTaskSwitchConfirm(true)
+    } else {
+      startFocus()
+    }
+  }, [taskId, startFocus, hasActiveSessionForOtherTask])
+
+  const confirmTaskSwitch = useCallback(() => {
+    clearSession()
+    setShowTaskSwitchConfirm(false)
+    startFocus()
+  }, [clearSession, startFocus])
+
+  useEffect(() => {
+    workspaceRequestIdRef.current += 1;
+    setCurrentTask(null);
+    setInitData(null);
+    setServerLogs(null);
+    setTaskError(null);
+    quizGenerationInFlightRef.current = false;
+    autoQuizTriggeredRef.current = false;
+    setQuizState(QUIZ_STATES.IDLE);
+    setQuizList([]);
+    setQuizError(null);
+    setQuizResult(null);
   }, [taskId]);
 
   useEffect(() => {
@@ -360,7 +390,7 @@ const FocusWorkspace = () => {
               phase={phase}
               timeLeft={timeLeft}
               totalTime={totalTime}
-              onStartFocus={startFocus}
+              onStartFocus={handleStartFocus}
               onPauseFocus={pauseFocus}
               onSuspendFocusForAbort={suspendFocusForAbort}
               onResumeFocus={resumeFocus}
@@ -408,12 +438,20 @@ const FocusWorkspace = () => {
               )}
 
               {phase === PHASES.SESSION_SAVE_ERROR && (
-                <button
-                  onClick={retrySave}
-                  className="mt-1 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors border border-rose-200"
-                >
-                  Retry Saving
-                </button>
+                <div className="flex flex-col gap-2 mt-1 w-full max-w-xs">
+                  <button
+                    onClick={retrySave}
+                    className="px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors border border-rose-200"
+                  >
+                    Retry Saving
+                  </button>
+                  <button
+                    onClick={() => setShowDiscardConfirm(true)}
+                    className="px-4 py-1.5 bg-stone-50 hover:bg-stone-100 text-stone-600 text-xs font-semibold rounded-lg transition-colors border border-stone-200"
+                  >
+                    Discard Local Session
+                  </button>
+                </div>
               )}
 
               {abortError && (
@@ -451,6 +489,58 @@ const FocusWorkspace = () => {
         onClose={handleCloseQuiz}
         onBackToDashboard={handleBackToDashboard}
       />
+
+      {showTaskSwitchConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-stone-800 mb-2">Active Session Found</h3>
+            <p className="text-sm text-stone-600 mb-6">
+              You have an active or paused session for another task. Do you want to keep it or discard it to start focusing on this task?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={confirmTaskSwitch}
+                className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                Discard and start
+              </button>
+              <button
+                onClick={() => setShowTaskSwitchConfirm(false)}
+                className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Keep existing session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-stone-800 mb-2">Discard Local Session?</h3>
+            <p className="text-sm text-stone-600 mb-6">
+              This will permanently delete your un-synced session progress and reload the latest data from the server.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowDiscardConfirm(false)
+                  discardSession()
+                }}
+                className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                Yes, discard it
+              </button>
+              <button
+                onClick={() => setShowDiscardConfirm(false)}
+                className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

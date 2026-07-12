@@ -7,6 +7,7 @@ public class PomodoroLogResponse {
 
     private UUID id;
     private UUID taskId;
+    private UUID clientSessionId;
     private OffsetDateTime startTime;
     private OffsetDateTime endTime;
     private Integer focusMinutes;
@@ -30,6 +31,14 @@ public class PomodoroLogResponse {
 
     public void setTaskId(UUID taskId) {
         this.taskId = taskId;
+    }
+
+    public UUID getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(UUID clientSessionId) {
+        this.clientSessionId = clientSessionId;
     }
 
     public OffsetDateTime getStartTime() {
