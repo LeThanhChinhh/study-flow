@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
+import AppBackground from '../components/background/AppBackground'
 import {
   AppNav,
   GreetingSection,
@@ -185,7 +185,7 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen">
-      <StudyOrbitBackdrop />
+      <AppBackground variant="dashboard" />
 
       <AppNav user={user} onLogout={handleLogout} onOpenProfile={() => setShowProfileModal(true)} />
 
@@ -240,7 +240,7 @@ const DashboardPage = () => {
         <QuickActionsBar
           onOpenGoals={() => setShowGoalModal(true)}
           onUploadPdf={handleOpenPlanning}
-          onOpenWorkspace={() => navigate('/focus')}
+          onOpenWorkspace={handleStartFocus}
           onEditAvailability={() => setShowTimeSlotModal(true)}
           onViewSchedule={() => navigate('/calendar')}
         />

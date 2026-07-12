@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import StudyIcon, { IconBadge } from '../components/StudyIcon'
-import { StudyOrbitBackdrop } from '../features/dashboard/DashboardDecor'
+import AppBackground from '../components/background/AppBackground'
 import { AppNav } from '../features/dashboard/DashboardSections'
 
 import { createGoal } from '../api/goalApi'
@@ -276,7 +276,7 @@ const PlanningPage = () => {
 
   return (
     <div className="min-h-screen">
-      <StudyOrbitBackdrop />
+      <AppBackground variant="planning" />
       <AppNav user={user} onLogout={handleLogout} />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-10 space-y-6">

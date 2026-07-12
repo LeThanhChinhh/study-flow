@@ -259,15 +259,22 @@ const FocusWorkspace = () => {
   }
   const handleBackToDashboard = () => navigate('/dashboard')
 
+  const hasSelectedTask = Boolean(taskId)
   const isCurrentTaskCompleted = currentTask?.status === 'COMPLETED' || currentTask?.status === 'done'
-  const isDataLoading = isTaskLoading || phase === PHASES.PROGRESS_LOADING;
+  // A missing taskId is an empty selection state, not a loading state.
+  // Keeping PROGRESS_LOADING scoped to an actual task prevents /focus from
+  // showing an endless skeleton and disabled 00:00 timer.
+  const isDataLoading = hasSelectedTask && (isTaskLoading || phase === PHASES.PROGRESS_LOADING);
   const isGeneratingQuiz = quizState === QUIZ_STATES.GENERATING;
   const disabled = !currentTask || isDataLoading || isCurrentTaskCompleted || phase === PHASES.SAVING_SESSION || phase === PHASES.SESSION_SAVE_ERROR || isAborting || taskError || isGeneratingQuiz;
 
   let statusText = 'Ready when you are'
   let statusColorClass = 'bg-stone-300'
   
-  if (isDataLoading) {
+  if (!hasSelectedTask) {
+    statusText = 'Choose a task to begin'
+    statusColorClass = 'bg-stone-300'
+  } else if (isDataLoading) {
     statusText = 'Loading progress...'
     statusColorClass = 'bg-stone-300'
   } else if (taskError) {
@@ -374,7 +381,7 @@ const FocusWorkspace = () => {
           >
             <CurrentTaskPanel 
               currentTask={currentTask} 
-              isTaskLoading={isDataLoading} 
+              isTaskLoading={hasSelectedTask && isDataLoading} 
               taskError={taskError} 
               focusedMinutes={focusedMinutes}
               targetMinutes={targetMinutes}
