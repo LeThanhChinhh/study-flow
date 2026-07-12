@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import AppBackground from '../components/background/AppBackground'
@@ -17,6 +17,7 @@ import GoalOverviewModal from '../features/dashboard/GoalOverviewModal'
 import ProfileSettingsModal from '../features/profile/ProfileSettingsModal'
 import { getTasks } from '../api/taskApi'
 import { getPomodoroLogs } from '../api/pomodoroApi'
+import { calculateStudyStreak } from '../features/dashboard/dashboardData'
 
 const formatLocalDate = () => {
   const date = new Date()
@@ -162,6 +163,11 @@ const DashboardPage = () => {
     setFocusHistoryRetryCount(count => count + 1)
   }
 
+  const streakSummary = useMemo(
+    () => calculateStudyStreak(focusLogs),
+    [focusLogs]
+  )
+
   const remainingTasksCount = tasks.filter(t => t.status !== 'done').length
   const hasIncompleteTasks = allTasks.some(t => t.status !== 'done')
   const nextFocusTask =
@@ -223,7 +229,14 @@ const DashboardPage = () => {
           className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-card-rise"
           style={{ animationDelay: '0.18s' }}
         >
-          <div className="lg:col-span-2"><StudyStreakCard user={user} /></div>
+          <div className="lg:col-span-2">
+            <StudyStreakCard
+              {...streakSummary}
+              isLoading={isFocusHistoryLoading}
+              error={focusHistoryError}
+              onRetry={handleFocusHistoryRetry}
+            />
+          </div>
           <div className="lg:col-span-3"><LearningProgressCard user={user} tasks={allTasks} todayTasks={tasks} onCreateGoal={handleOpenPlanning} /></div>
         </div>
 
