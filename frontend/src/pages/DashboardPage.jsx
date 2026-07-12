@@ -14,6 +14,7 @@ import {
 } from '../features/dashboard/DashboardSections'
 import TimeSlotEditorModal from '../features/dashboard/TimeSlotEditorModal'
 import GoalOverviewModal from '../features/dashboard/GoalOverviewModal'
+import ProfileSettingsModal from '../features/profile/ProfileSettingsModal'
 import { getTasks } from '../api/taskApi'
 import { getPomodoroLogs } from '../api/pomodoroApi'
 
@@ -56,6 +57,7 @@ const DashboardPage = () => {
   const [retryCount, setRetryCount] = useState(0)
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false)
   const [showGoalModal, setShowGoalModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   const [focusLogs, setFocusLogs] = useState([])
   const [isFocusHistoryLoading, setIsFocusHistoryLoading] = useState(true)
@@ -185,7 +187,7 @@ const DashboardPage = () => {
     <div className="min-h-screen">
       <StudyOrbitBackdrop />
 
-      <AppNav user={user} onLogout={handleLogout} />
+      <AppNav user={user} onLogout={handleLogout} onOpenProfile={() => setShowProfileModal(true)} />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-10 space-y-6">
         <GreetingSection
@@ -257,6 +259,10 @@ const DashboardPage = () => {
       
       {showGoalModal && (
         <GoalOverviewModal onClose={() => setShowGoalModal(false)} />
+      )}
+      
+      {showProfileModal && (
+        <ProfileSettingsModal onClose={() => setShowProfileModal(false)} />
       )}
     </div>
   )

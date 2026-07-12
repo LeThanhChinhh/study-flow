@@ -6,6 +6,9 @@ import java.util.UUID;
 public class PomodoroLogRequest {
 
     private UUID taskId;
+    
+    @jakarta.validation.constraints.NotNull(message = "clientSessionId is required")
+    private UUID clientSessionId;
     private OffsetDateTime startTime;
     private OffsetDateTime endTime;
     private Integer focusMinutes;
@@ -19,6 +22,14 @@ public class PomodoroLogRequest {
 
     public void setTaskId(UUID taskId) {
         this.taskId = taskId;
+    }
+
+    public UUID getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(UUID clientSessionId) {
+        this.clientSessionId = clientSessionId;
     }
 
     public OffsetDateTime getStartTime() {

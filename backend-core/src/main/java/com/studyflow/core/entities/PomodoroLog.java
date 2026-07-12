@@ -12,6 +12,9 @@ public class PomodoroLog extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "client_session_id", nullable = false)
+    private UUID clientSessionId;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "task_id", nullable = false)
     private Task task;
@@ -40,6 +43,14 @@ public class PomodoroLog extends BaseEntity {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(UUID clientSessionId) {
+        this.clientSessionId = clientSessionId;
     }
 
     public Task getTask() {

@@ -15,20 +15,8 @@ const panelVariants = {
 
 const DASHBOARD_CTA_CLASS = "inline-flex items-center justify-center px-4 py-2 mt-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg transition-colors"
 
-// Current Task panel — shown on the left column
-export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
-  const calculateDurationMinutes = (startTime, endTime) => {
-    if (!startTime || !endTime) return 25
-    try {
-      const [h1, m1] = startTime.split(':').map(Number)
-      const [h2, m2] = endTime.split(':').map(Number)
-      let diff = (h2 * 60 + m2) - (h1 * 60 + m1)
-      if (diff < 0) diff += 24 * 60
-      return diff
-    } catch (e) {
-      return 25
-    }
-  }
+// CurrentTaskPanel — shown on the left column
+export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focusedMinutes = 0, targetMinutes = 0, remainingMinutes = 0 }) => {
 
   if (isTaskLoading) {
     return (
@@ -106,7 +94,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
   const title = currentTask.title
   const subject = currentTask.goalName || 'Study Goal'
   const module = currentTask.moduleTitle || currentTask.moduleName || 'Scheduled Task'
-  const estimatedMins = calculateDurationMinutes(currentTask.startTime, currentTask.endTime)
+  const estimatedMins = targetMinutes > 0 ? targetMinutes : '--'
   const intentions = [
     `Focus on: ${title}`,
     'Complete one Pomodoro session',
@@ -178,6 +166,25 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError }) => {
           ))}
         </ul>
       </div>
+
+      {/* Progress */}
+      {targetMinutes > 0 && (
+        <div className="mt-2 pt-4 border-t border-stone-100">
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="font-medium text-stone-700">Progress</span>
+            <span className="text-stone-500">{remainingMinutes} min remaining</span>
+          </div>
+          <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden flex">
+            <div 
+              className="h-full bg-violet-500 transition-all duration-500 ease-out rounded-full" 
+              style={{ width: `${Math.min(100, Math.max(0, (focusedMinutes / targetMinutes) * 100))}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-stone-400 mt-1.5 font-medium">
+            Focused {focusedMinutes} of {targetMinutes} min
+          </p>
+        </div>
+      )}
     </motion.section>
   )
 }

@@ -61,6 +61,24 @@ const GLYPHS = {
       <rect x="14" y="4" width="4" height="16" />
     </>
   ),
+  'square': (
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+  ),
+  'fast-forward': (
+    <>
+      <polygon points="13 19 22 12 13 5 13 19" />
+      <polygon points="2 19 11 12 2 5 2 19" />
+    </>
+  ),
+  'coffee': (
+    <>
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" />
+      <line x1="10" y1="1" x2="10" y2="4" />
+      <line x1="14" y1="1" x2="14" y2="4" />
+    </>
+  ),
   'zap': (
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   ),

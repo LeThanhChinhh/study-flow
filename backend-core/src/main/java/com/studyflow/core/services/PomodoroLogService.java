@@ -4,6 +4,7 @@ import com.studyflow.core.dtos.pomodoro.PomodoroLogRequest;
 import com.studyflow.core.dtos.pomodoro.PomodoroLogResponse;
 import com.studyflow.core.entities.PomodoroLog;
 import com.studyflow.core.entities.Task;
+import com.studyflow.core.exceptions.ConflictException;
 import com.studyflow.core.exceptions.ResourceNotFoundException;
 import com.studyflow.core.repositories.PomodoroLogRepository;
 import com.studyflow.core.repositories.TaskRepository;
@@ -71,10 +72,22 @@ public class PomodoroLogService {
         log.setBreakMinutes(breakMinutes);
         log.setPauseCount(pauseCount);
         log.setStatus(status);
+        log.setClientSessionId(request.getClientSessionId());
 
-        PomodoroLog savedLog = pomodoroLogRepository.saveAndFlush(log);
+        pomodoroLogRepository.insertIfNotExists(log);
 
-        return toResponse(savedLog);
+        PomodoroLog existingLog = pomodoroLogRepository
+                .findByTaskIdAndClientSessionId(task.getId(), request.getClientSessionId())
+                .orElseThrow(() -> new IllegalStateException("Failed to retrieve pomodoro log after insert"));
+
+        if (!existingLog.getStatus().equals(status) ||
+            !existingLog.getFocusMinutes().equals(focusMinutes) ||
+            !existingLog.getBreakMinutes().equals(breakMinutes) ||
+            !existingLog.getPauseCount().equals(pauseCount)) {
+            throw new ConflictException("Session conflict detected: payload mismatch for the given clientSessionId");
+        }
+
+        return toResponse(existingLog);
     }
 
     @Transactional(readOnly = true)
@@ -103,6 +116,10 @@ public class PomodoroLogService {
     private void validateRequest(PomodoroLogRequest request) {
         if (request.getTaskId() == null) {
             throw new IllegalArgumentException("taskId is required");
+        }
+
+        if (request.getClientSessionId() == null) {
+            throw new IllegalArgumentException("clientSessionId is required");
         }
 
         if (request.getFocusMinutes() == null || request.getFocusMinutes() <= 0) {
@@ -136,6 +153,7 @@ public class PomodoroLogService {
         PomodoroLogResponse response = new PomodoroLogResponse();
         response.setId(entity.getId());
         response.setTaskId(entity.getTask().getId());
+        response.setClientSessionId(entity.getClientSessionId());
         response.setStartTime(entity.getStartTime());
         response.setEndTime(entity.getEndTime());
         response.setFocusMinutes(entity.getFocusMinutes());

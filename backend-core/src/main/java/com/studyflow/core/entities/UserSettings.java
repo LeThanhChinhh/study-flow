@@ -58,8 +58,16 @@ public class UserSettings {
         return pomodoroDuration;
     }
 
+    public void setPomodoroDuration(Integer pomodoroDuration) {
+        this.pomodoroDuration = pomodoroDuration;
+    }
+
     public Integer getShortBreakDuration() {
         return shortBreakDuration;
+    }
+
+    public void setShortBreakDuration(Integer shortBreakDuration) {
+        this.shortBreakDuration = shortBreakDuration;
     }
 
     public String getTheme() {
