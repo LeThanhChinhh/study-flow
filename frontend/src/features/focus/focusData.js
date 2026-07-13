@@ -1,4 +1,4 @@
-// Mock data for the Focus Workspace page.
+// Static support copy for the Focus Workspace page.
 // Replace with real API data in a later sprint.
 
 

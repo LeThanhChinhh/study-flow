@@ -7,9 +7,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.studyflow.core.exceptions.ResourceNotFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -185,6 +188,90 @@ public class QuizService {
         }
 
         return quizResponses;
+    }
+
+    /**
+     * Trả về lần trả lời gần nhất của từng câu hỏi trong một Task để người dùng xem lại.
+     */
+    @Transactional(readOnly = true)
+    public QuizReviewResponse getQuizReview(UUID taskId) {
+        UUID userId = getCurrentUserId();
+        Task task = taskRepository.findByIdAndUserId(taskId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không có quyền truy cập Task này"));
+
+        List<QuizAttempt> attempts = quizAttemptRepository.findReviewAttempts(userId, taskId);
+        if (attempts.isEmpty()) {
+            throw new ResourceNotFoundException("No submitted quiz review found for this task");
+        }
+
+        Map<UUID, QuizAttempt> latestAttemptByQuiz = new LinkedHashMap<>();
+        for (QuizAttempt attempt : attempts) {
+            latestAttemptByQuiz.putIfAbsent(attempt.getQuiz().getId(), attempt);
+        }
+
+        List<QuizAttempt> latestAttempts = new ArrayList<>(latestAttemptByQuiz.values());
+        latestAttempts.sort(Comparator.comparing(
+                attempt -> attempt.getQuiz().getCreatedAt(),
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+
+        List<QuestionResultDto> results = new ArrayList<>();
+        int correctAnswers = 0;
+        OffsetDateTime answeredAt = null;
+
+        for (QuizAttempt attempt : latestAttempts) {
+            Quiz quiz = attempt.getQuiz();
+            List<QuizOption> options = quizOptionRepository.findByQuizId(quiz.getId());
+            List<QuizOption> correctOptions = options.stream()
+                    .filter(option -> Boolean.TRUE.equals(option.getIsCorrect()))
+                    .toList();
+            if (correctOptions.size() != 1) {
+                throw new IllegalStateException("Data error: Quiz must have exactly one correct option.");
+            }
+            QuizOption correctOption = correctOptions.get(0);
+
+            boolean selectedOptionExists = options.stream()
+                    .anyMatch(option -> option.getId().equals(attempt.getSelectedOptionId()));
+            if (!selectedOptionExists) {
+                throw new IllegalStateException("Data error: Selected quiz option no longer exists.");
+            }
+
+            List<QuizOptionResponse> optionResponses = options.stream()
+                    .map(option -> new QuizOptionResponse(option.getId(), option.getText()))
+                    .toList();
+
+            boolean isCorrect = Boolean.TRUE.equals(attempt.getIsCorrect());
+            if (isCorrect) {
+                correctAnswers++;
+            }
+            if (answeredAt == null || attempt.getAnsweredAt().isAfter(answeredAt)) {
+                answeredAt = attempt.getAnsweredAt();
+            }
+
+            results.add(new QuestionResultDto(
+                    quiz.getId(),
+                    quiz.getQuestionText(),
+                    attempt.getSelectedOptionId(),
+                    correctOption.getId(),
+                    isCorrect,
+                    optionResponses
+            ));
+        }
+
+        int totalQuestions = results.size();
+        int scorePercent = totalQuestions == 0
+                ? 0
+                : (int) Math.round(correctAnswers * 100.0 / totalQuestions);
+
+        return new QuizReviewResponse(
+                task.getId(),
+                task.getTitle(),
+                totalQuestions,
+                correctAnswers,
+                scorePercent,
+                answeredAt,
+                results
+        );
     }
 
     /**

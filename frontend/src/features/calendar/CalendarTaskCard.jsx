@@ -51,7 +51,7 @@ const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = fal
   // Only allow drag if: enableDrag=true, id exists, startTime + endTime exist, not currently moving
   const canDrag = Boolean(enableDrag && task.id && task.startTime && task.endTime && !isMoving)
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { task },
     disabled: !canDrag,

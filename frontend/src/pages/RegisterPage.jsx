@@ -62,7 +62,11 @@ const RegisterPage = () => {
       return
     }
     
-    const { confirmPassword: _omit, ...payload } = formData
+    const payload = {
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+    }
     
     try {
       const data = await register(payload)
@@ -74,8 +78,8 @@ const RegisterPage = () => {
       } else {
         navigate('/login')
       }
-    } catch (err) {
-      // Error handled by AuthContext
+    } catch {
+      // Error handled by AuthContext.
     }
   }
 

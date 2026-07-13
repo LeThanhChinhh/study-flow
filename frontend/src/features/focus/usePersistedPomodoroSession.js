@@ -72,7 +72,7 @@ export function usePersistedPomodoroSession() {
       let parsed;
       try {
         parsed = JSON.parse(raw);
-      } catch (e) {
+      } catch {
         localStorage.removeItem(STORAGE_KEY);
         return null;
       }
@@ -109,7 +109,7 @@ export function usePersistedPomodoroSession() {
   const clearSession = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
+    } catch {
       // Ignore
     }
   }, []);
@@ -121,7 +121,7 @@ export function usePersistedPomodoroSession() {
       let parsed;
       try {
         parsed = JSON.parse(raw);
-      } catch (e) {
+      } catch {
         localStorage.removeItem(STORAGE_KEY);
         return false;
       }
@@ -135,7 +135,7 @@ export function usePersistedPomodoroSession() {
         return true;
       }
       return false;
-    } catch (e) {
+    } catch {
       return false;
     }
   }, []);

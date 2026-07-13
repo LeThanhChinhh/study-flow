@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import StudyIcon from '../../components/StudyIcon'
 import { createTask } from '../../api/taskApi'
 

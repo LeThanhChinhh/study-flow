@@ -33,8 +33,8 @@ const LoginPage = () => {
     try {
       await login(formData)
       navigate('/dashboard')
-    } catch (err) {
-      // Error is handled by AuthContext and available via 'error' variable
+    } catch {
+      // Error is handled by AuthContext and exposed through `error`.
     }
   }
 
@@ -82,20 +82,12 @@ const LoginPage = () => {
 
         {/* Password */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label
-              htmlFor="login-password"
-              className="block text-sm font-medium text-stone-700"
-            >
-              Password
-            </label>
-            <button
-              type="button"
-              className="text-xs text-violet-600 hover:text-violet-700 font-medium transition-colors"
-            >
-              Forgot password?
-            </button>
-          </div>
+          <label
+            htmlFor="login-password"
+            className="block text-sm font-medium text-stone-700 mb-1.5"
+          >
+            Password
+          </label>
           <div className="relative">
             <input
               id="login-password"

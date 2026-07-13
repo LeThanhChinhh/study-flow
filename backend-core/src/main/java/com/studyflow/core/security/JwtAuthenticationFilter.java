@@ -60,8 +60,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        System.out.println("JWT FILTER: authentication set, principal=" + authentication.getPrincipal());
-
         filterChain.doFilter(request, response);
     }
 }

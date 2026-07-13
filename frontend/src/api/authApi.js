@@ -23,8 +23,16 @@ export const getMe = () => {
   return apiClient.get('/api/v1/auth/me');
 };
 
+/**
+ * Cập nhật username của user hiện tại.
+ */
+export const updateUsername = (payload) => {
+  return apiClient.patch('/api/v1/auth/me/username', payload);
+};
+
 export const authApi = {
   register,
   login,
   getMe,
+  updateUsername,
 };

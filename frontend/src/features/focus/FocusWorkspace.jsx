@@ -41,7 +41,7 @@ const timerVariants = {
   },
 }
 
-export const QUIZ_STATES = {
+const QUIZ_STATES = {
   IDLE: 'IDLE',
   READY: 'READY',
   GENERATING: 'GENERATING',
@@ -64,7 +64,7 @@ const calculateTargetMinutes = (task, defaultFocus) => {
     }
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1)
     return diff > 0 ? diff : defaultFocus
-  } catch (e) {
+  } catch {
     return defaultFocus
   }
 }
@@ -486,16 +486,18 @@ const FocusWorkspace = () => {
         </div>
       </motion.main>
 
-      <QuizModal 
-        isOpen={isQuizOpen}
-        quizzes={quizList}
-        isSubmitting={isSubmittingQuiz}
-        error={quizError}
-        result={quizResult}
-        onSubmit={handleQuizSubmit}
-        onClose={handleCloseQuiz}
-        onBackToDashboard={handleBackToDashboard}
-      />
+      {isQuizOpen && (
+        <QuizModal
+          isOpen
+          quizzes={quizList}
+          isSubmitting={isSubmittingQuiz}
+          error={quizError}
+          result={quizResult}
+          onSubmit={handleQuizSubmit}
+          onClose={handleCloseQuiz}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      )}
 
       {showTaskSwitchConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm">

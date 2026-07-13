@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import StudyIcon from '../../components/StudyIcon'
-import { updateTask } from '../../api/taskApi'
+import QuizReviewModal from '../quiz/QuizReviewModal'
+import { getQuizReview } from '../../api/quizApi'
+import { deleteTask, updateTask } from '../../api/taskApi'
 
 /**
  * Status display config — aligns with CalendarTaskCard STATUS_CONFIG.
@@ -26,17 +28,6 @@ const STATUS_CONFIG = {
 
 
 const getStatusCfg = (status) => STATUS_CONFIG[status] ?? STATUS_CONFIG.PENDING
-
-/** Format "HH:mm" → "h:mm AM/PM" */
-const fmt12 = (t) => {
-  if (!t) return null
-  const [hRaw, m = '00'] = t.split(':')
-  const h = Number(hRaw)
-  if (Number.isNaN(h)) return t
-  const period = h >= 12 ? 'PM' : 'AM'
-  const display = h % 12 || 12
-  return `${display}:${m} ${period}`
-}
 
 /** "HH:mm:ss" or "HH:mm" → "HH:mm" (input[type=time] format) */
 const toTimeInput = (t) => {
@@ -80,8 +71,6 @@ const hasScheduleChanged = (form, task) =>
  *   onClose       — callback to close the modal
  *   onTaskUpdated — callback(updatedTask) after a successful update
  */
-import { deleteTask } from '../../api/taskApi'
-
 const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }) => {
   const navigate = useNavigate()
 
@@ -97,20 +86,11 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
 
   const [isDeleting,          setIsDeleting]          = useState(false)
   const [showConfirmDelete,   setShowConfirmDelete]   = useState(false)
+  const [isReviewLoading,     setIsReviewLoading]     = useState(false)
+  const [quizReview,          setQuizReview]          = useState(null)
 
   const isManualTask = task?.isAiGenerated === false
-  const isAnyBusy = actionLoading !== null || isSaving
-
-  /* ── Sync form when task changes (new task opened) ──────────────────────── */
-
-  useEffect(() => {
-    setEditForm(taskToForm(task))
-    setFormError(null)
-    setSaveSuccess(false)
-    setActionError(null)
-    setShowConfirmDelete(false)
-    setIsDeleting(false)
-  }, [task?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const isAnyBusy = actionLoading !== null || isSaving || isReviewLoading
 
   /* ── Escape key closes modal ─────────────────────────────────────────────── */
 
@@ -118,23 +98,16 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     if (!task) return undefined
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && !isAnyBusy && !isDeleting) onClose?.()
+      if (e.key === 'Escape' && !quizReview && !isAnyBusy && !isDeleting) onClose?.()
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [task, onClose, isAnyBusy, isDeleting])
+  }, [task, onClose, isAnyBusy, isDeleting, quizReview])
 
   if (!task) return null
 
   const cfg = getStatusCfg(task.status)
-
-  const timeRange =
-    task.startTime && task.endTime
-      ? `${fmt12(task.startTime)} – ${fmt12(task.endTime)}`
-      : task.startTime
-      ? fmt12(task.startTime)
-      : null
 
   const scheduleChanged = hasScheduleChanged(editForm, task)
   const titleChanged = isManualTask && editForm.title.trim() !== (task?.title ?? '').trim()
@@ -227,6 +200,26 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     if (!task.id) return
     onClose()
     navigate(`/focus?taskId=${task.id}`)
+  }
+
+  /* ── Review saved quiz answers ─────────────────────────────────────────────── */
+
+  const handleReviewQuiz = async () => {
+    if (!task.id || isReviewLoading) return
+
+    setIsReviewLoading(true)
+    setActionError(null)
+    try {
+      const review = await getQuizReview(task.id)
+      setQuizReview(review)
+    } catch (err) {
+      const message = err?.status === 404
+        ? 'No saved quiz review is available for this task.'
+        : err?.message || 'Could not load quiz review. Please try again.'
+      setActionError(message)
+    } finally {
+      setIsReviewLoading(false)
+    }
   }
 
   /* ── Shared input class ──────────────────────────────────────────────────── */
@@ -466,6 +459,23 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
               </button>
             )}
 
+
+            {task.id && task.status === 'COMPLETED' && (
+              <button
+                type="button"
+                onClick={handleReviewQuiz}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={isAnyBusy || isDeleting}
+              >
+                <StudyIcon
+                  name={isReviewLoading ? 'timer' : 'check-circle'}
+                  size={14}
+                  className={isReviewLoading ? 'animate-spin' : ''}
+                />
+                {isReviewLoading ? 'Loading review…' : 'Review Quiz Answers'}
+              </button>
+            )}
+
             {/* Status quick buttons */}
             <div>
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">
@@ -552,6 +562,8 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
           )}
         </div>
       </div>
+
+      <QuizReviewModal review={quizReview} onClose={() => setQuizReview(null)} />
     </>
   )
 }

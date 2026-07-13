@@ -196,7 +196,7 @@ const PlanningPage = () => {
           const normalizedErr = errMsg.toLowerCase()
 
           if (err?.status === 409 || normalizedErr.includes('already generated')) {
-            throw new Error('Schedule was already generated for this goal.')
+            throw new Error('Schedule was already generated for this goal.', { cause: err })
           }
 
           if (
@@ -205,6 +205,7 @@ const PlanningPage = () => {
           ) {
             throw new Error(
               'Your available study time is not enough for this AI plan. Add more time slots, extend the deadline, or regenerate a lighter plan.',
+              { cause: err },
             )
           }
 
@@ -214,12 +215,14 @@ const PlanningPage = () => {
           ) {
             throw new Error(
               'One or more tasks are longer than your available time windows. Add a longer time slot or regenerate a lighter plan.',
+              { cause: err },
             )
           }
 
           if (normalizedErr.includes('could not fit all tasks')) {
             throw new Error(
               'Your tasks could not fit cleanly into the selected time windows. Add longer study windows, add more availability, or regenerate a lighter plan.',
+              { cause: err },
             )
           }
 
@@ -230,7 +233,7 @@ const PlanningPage = () => {
             normalizedErr.includes('material') ||
             normalizedErr.includes('document')
           ) {
-            throw new Error('We could not parse this document properly. Try a clearer text-based PDF.')
+            throw new Error('We could not parse this document properly. Try a clearer text-based PDF.', { cause: err })
           }
 
           if (
@@ -241,10 +244,11 @@ const PlanningPage = () => {
           ) {
             throw new Error(
               'Could not generate schedule with the selected time slots. Try adding future availability.',
+              { cause: err },
             )
           }
 
-          throw new Error(errMsg || 'Failed to generate schedule.')
+          throw new Error(errMsg || 'Failed to generate schedule.', { cause: err })
         }
         return
       }
