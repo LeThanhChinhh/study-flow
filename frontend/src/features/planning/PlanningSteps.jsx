@@ -2,6 +2,7 @@ import { useState } from 'react'
 import StudyIcon from '../../components/StudyIcon'
 import { DAY_LABELS } from './planningConstants'
 import { formatTime12Hour, formatLocalDate, getDayOfWeekForDate } from './planningUtils'
+import { findInternalOverlap, findOverlap } from './timeSlotValidation'
 import EditablePlanStep from './EditablePlanStep'
 
 // ─── GoalStep ────────────────────────────────────────────────────────────────
@@ -43,7 +44,13 @@ export const GoalStep = ({ goalForm, setGoalForm }) => (
 
 // ─── TimeSlotsStep ────────────────────────────────────────────────────────────
 
-export const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => {
+export const TimeSlotsStep = ({
+  timeSlotsForm,
+  setTimeSlotsForm,
+  goalForm,
+  existingTimeSlots = [],
+  isLoadingTimeSlots = false,
+}) => {
   const addSlot = () =>
     setTimeSlotsForm([...timeSlotsForm, { dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }])
 
@@ -58,11 +65,44 @@ export const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => 
     setTimeSlotsForm(timeSlotsForm.filter((_, i) => i !== index))
   }
 
+  const internalOverlap = findInternalOverlap(timeSlotsForm)
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-stone-500 mb-4">
-        Add the time windows you usually use for studying. AI will schedule tasks within these slots.
+        Availability is shared across your learning goals. Existing time slots can be reused, and any new slot must not overlap them.
       </p>
+
+      {isLoadingTimeSlots ? (
+        <div className="rounded-2xl border border-stone-100 bg-stone-50/70 p-4 text-sm text-stone-500">
+          Loading your existing availability...
+        </div>
+      ) : existingTimeSlots.length > 0 ? (
+        <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 mb-2">
+            Existing availability used for this plan
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {existingTimeSlots.map((slot) => (
+              <span key={slot.id} className="badge bg-white text-stone-600 border border-violet-100">
+                {DAY_LABELS[slot.dayOfWeek]} · {formatTime12Hour(slot.startTime)} – {formatTime12Hour(slot.endTime)}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {timeSlotsForm.length === 0 && existingTimeSlots.length > 0 && (
+        <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+          You can continue with your existing availability, or add another non-overlapping time slot below.
+        </p>
+      )}
+
+      {internalOverlap && (
+        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+          Time slots {internalOverlap.leftIndex + 1} and {internalOverlap.rightIndex + 1} overlap.
+        </p>
+      )}
       {timeSlotsForm.map((slot, i) => {
         const today = formatLocalDate()
         const todayDayOfWeek = getDayOfWeekForDate(today)
@@ -70,6 +110,7 @@ export const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => 
           Number(slot.dayOfWeek) === todayDayOfWeek &&
           goalForm?.startDate <= today &&
           goalForm?.deadline >= today
+        const existingOverlap = findOverlap(slot, existingTimeSlots)
 
         return (
           <div
@@ -128,6 +169,11 @@ export const TimeSlotsStep = ({ timeSlotsForm, setTimeSlotsForm, goalForm }) => 
               {isTodaySlot && (
                 <p className="text-[11px] text-stone-400 ml-1 mt-0.5">
                   For today, choose a start time later than now.
+                </p>
+              )}
+              {existingOverlap && (
+                <p className="text-[11px] text-rose-600 ml-1 mt-0.5 font-medium">
+                  Overlaps with existing {DAY_LABELS[existingOverlap.dayOfWeek]} availability ({String(existingOverlap.startTime).slice(0, 5)}–{String(existingOverlap.endTime).slice(0, 5)}).
                 </p>
               )}
             </div>
@@ -337,6 +383,8 @@ const StepContent = ({ stepId, state }) => {
         timeSlotsForm={state.timeSlotsForm}
         setTimeSlotsForm={state.setTimeSlotsForm}
         goalForm={state.goalForm}
+        existingTimeSlots={state.existingTimeSlots}
+        isLoadingTimeSlots={state.isLoadingTimeSlots}
       />
     )
   if (stepId === 'upload')

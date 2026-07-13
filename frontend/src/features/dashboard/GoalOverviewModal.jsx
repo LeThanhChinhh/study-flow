@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudyIcon from '../../components/StudyIcon';
-import { getGoals } from '../../api/goalApi';
+import { deleteGoal, getGoals } from '../../api/goalApi';
 import { getTasks } from '../../api/taskApi';
 
 const STATUS_COLORS = {
@@ -59,13 +59,16 @@ const getDeadlineContext = (goal) => {
   }
 };
 
-const GoalOverviewModal = ({ onClose }) => {
+const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
   const navigate = useNavigate();
   const [goals, setGoals] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedGoalId, setExpandedGoalId] = useState(null);
+  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState(null);
+  const [deletingGoalId, setDeletingGoalId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,6 +92,28 @@ const GoalOverviewModal = ({ onClose }) => {
 
     fetchData();
   }, []);
+
+
+  const handleDeleteGoal = async (goal) => {
+    try {
+      setDeletingGoalId(goal.id);
+      setDeleteError(null);
+
+      await deleteGoal(goal.id);
+
+      setGoals(currentGoals => currentGoals.filter(item => item.id !== goal.id));
+      setTasks(currentTasks => currentTasks.filter(task => task.goalId !== goal.id));
+      setExpandedGoalId(currentId => currentId === goal.id ? null : currentId);
+      setConfirmDeleteGoalId(null);
+      onGoalDeleted?.(goal.id);
+    } catch (err) {
+      console.error('Failed to delete goal', err);
+      const message = err?.response?.data?.message || 'Could not delete this goal. Please try again.';
+      setDeleteError(message);
+    } finally {
+      setDeletingGoalId(null);
+    }
+  };
 
   const goalsWithStats = useMemo(() => {
     return goals.map(goal => {
@@ -238,14 +263,73 @@ const GoalOverviewModal = ({ onClose }) => {
                           </button>
                           
                           <button
+                            onClick={() => {
+                              setDeleteError(null);
+                              setConfirmDeleteGoalId(goal.id);
+                            }}
+                            disabled={deletingGoalId === goal.id}
+                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete goal"
+                            aria-label={`Delete ${goal.title}`}
+                          >
+                            <StudyIcon
+                              name={deletingGoalId === goal.id ? 'loader' : 'trash'}
+                              size={15}
+                              className={deletingGoalId === goal.id ? 'animate-spin' : ''}
+                            />
+                          </button>
+
+                          <button
                             onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
                             className={`text-stone-400 hover:text-stone-600 p-1 rounded transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                            aria-label={isExpanded ? `Collapse ${goal.title}` : `Expand ${goal.title}`}
                           >
                             <StudyIcon name="chevron-down" size={16} />
                           </button>
                         </div>
                       </div>
                     </div>
+
+                    {confirmDeleteGoalId === goal.id && (
+                      <div className="mx-5 mb-4 p-4 rounded-xl border border-rose-200 bg-rose-50">
+                        <div className="flex items-start gap-3">
+                          <StudyIcon name="alert-triangle" size={17} className="text-rose-600 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-rose-800">Delete this goal?</p>
+                            <p className="mt-1 text-xs leading-5 text-rose-700">
+                              This also removes all tasks and learning modules linked to “{goal.title}”. This action cannot be undone.
+                            </p>
+                            {deleteError && (
+                              <p className="mt-2 text-xs font-medium text-rose-800">{deleteError}</p>
+                            )}
+                            <div className="mt-3 flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmDeleteGoalId(null);
+                                  setDeleteError(null);
+                                }}
+                                disabled={deletingGoalId === goal.id}
+                                className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-xs font-medium text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteGoal(goal)}
+                                disabled={deletingGoalId === goal.id}
+                                className="px-3 py-1.5 rounded-lg bg-rose-600 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                              >
+                                {deletingGoalId === goal.id && (
+                                  <StudyIcon name="loader" size={13} className="animate-spin" />
+                                )}
+                                {deletingGoalId === goal.id ? 'Deleting...' : 'Delete goal'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Goal Tasks (Expanded) */}
                     {isExpanded && (
@@ -304,7 +388,7 @@ const GoalOverviewModal = ({ onClose }) => {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-stone-100 bg-stone-50/50 flex justify-between items-center">
-          <p className="text-xs text-stone-500">Read-only view</p>
+          <p className="text-xs text-stone-500">Manage goals and review their tasks</p>
           <button 
             onClick={() => { onClose(); navigate('/calendar'); }}
             className="btn-primary w-auto shrink-0 text-xs px-4 py-2 flex items-center gap-2"

@@ -271,7 +271,10 @@ const DashboardPage = () => {
       )}
       
       {showGoalModal && (
-        <GoalOverviewModal onClose={() => setShowGoalModal(false)} />
+        <GoalOverviewModal
+          onClose={() => setShowGoalModal(false)}
+          onGoalDeleted={handleRetry}
+        />
       )}
       
       {showProfileModal && (

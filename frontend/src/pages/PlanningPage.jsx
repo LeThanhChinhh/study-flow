@@ -6,7 +6,7 @@ import AppBackground from '../components/background/AppBackground'
 import { AppNav } from '../features/dashboard/DashboardSections'
 
 import { createGoal } from '../api/goalApi'
-import { createTimeSlot } from '../api/timeSlotApi'
+import { createTimeSlot, deleteTimeSlot, getTimeSlots } from '../api/timeSlotApi'
 import { uploadMaterial, getMaterialStatus } from '../api/materialApi'
 import { generateSchedule } from '../api/scheduleApi'
 
@@ -25,6 +25,7 @@ import {
   buildPlanningDataPayload,
 } from '../features/planning/planningUtils'
 import PlanningStepper from '../features/planning/PlanningStepper'
+import { findInternalOverlap, findOverlap } from '../features/planning/timeSlotValidation'
 import StepContent from '../features/planning/PlanningSteps'
 
 const PlanningPage = () => {
@@ -35,6 +36,8 @@ const PlanningPage = () => {
   // API State
   const [goalForm, setGoalForm] = useState({ title: '', startDate: '', deadline: '' })
   const [timeSlotsForm, setTimeSlotsForm] = useState([{ dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }])
+  const [existingTimeSlots, setExistingTimeSlots] = useState([])
+  const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false)
   const [fileForm, setFileForm] = useState(null)
 
   const [createdGoal, setCreatedGoal] = useState(null)
@@ -55,6 +58,43 @@ const PlanningPage = () => {
     logout()
     navigate('/login')
   }
+
+  useEffect(() => {
+    if (currentStep !== 1) return
+
+    let isActive = true
+    const loadExistingTimeSlots = async () => {
+      setIsLoadingTimeSlots(true)
+      try {
+        const slots = await getTimeSlots()
+        if (!isActive) return
+
+        const normalizedSlots = Array.isArray(slots) ? slots : []
+        setExistingTimeSlots(normalizedSlots)
+
+        const hasUntouchedDefault =
+          timeSlotsForm.length === 1 &&
+          timeSlotsForm[0].dayOfWeek === 1 &&
+          timeSlotsForm[0].startTime === '08:00' &&
+          timeSlotsForm[0].endTime === '09:00'
+
+        if (normalizedSlots.length > 0 && hasUntouchedDefault) {
+          setTimeSlotsForm([])
+        }
+      } catch (error) {
+        if (isActive) {
+          setErrorMsg(error?.message || 'Could not load your existing availability.')
+        }
+      } finally {
+        if (isActive) setIsLoadingTimeSlots(false)
+      }
+    }
+
+    loadExistingTimeSlots()
+    return () => {
+      isActive = false
+    }
+  }, [currentStep])
 
   // Polling Step 4
   useEffect(() => {
@@ -130,7 +170,9 @@ const PlanningPage = () => {
           setTimeSlotsForm([{ dayOfWeek: suggestedDay, startTime: defaultStart, endTime: defaultEnd }])
         }
       } else if (currentStep === 1) {
-        if (timeSlotsForm.length === 0) throw new Error('At least 1 time slot required')
+        if (existingTimeSlots.length === 0 && timeSlotsForm.length === 0) {
+          throw new Error('At least 1 time slot required')
+        }
 
         for (const slot of timeSlotsForm) {
           if (!slot.startTime || !slot.endTime || slot.startTime >= slot.endTime) {
@@ -163,7 +205,37 @@ const PlanningPage = () => {
             )
           }
         }
-        await Promise.all(timeSlotsForm.map((ts) => createTimeSlot(ts)))
+
+        const internalOverlap = findInternalOverlap(timeSlotsForm)
+        if (internalOverlap) {
+          const first = internalOverlap.leftIndex + 1
+          const second = internalOverlap.rightIndex + 1
+          throw new Error(`Time slots ${first} and ${second} overlap. Please merge or adjust them.`)
+        }
+
+        for (let index = 0; index < timeSlotsForm.length; index += 1) {
+          const overlap = findOverlap(timeSlotsForm[index], existingTimeSlots)
+          if (overlap) {
+            throw new Error(
+              `Time slot ${index + 1} overlaps with your existing ${DAY_LABELS[overlap.dayOfWeek]} availability (${String(overlap.startTime).slice(0, 5)}–${String(overlap.endTime).slice(0, 5)}).`,
+            )
+          }
+        }
+
+        const createdSlots = []
+        try {
+          for (const slot of timeSlotsForm) {
+            const createdSlot = await createTimeSlot(slot)
+            createdSlots.push(createdSlot)
+          }
+        } catch (error) {
+          await Promise.allSettled(
+            createdSlots
+              .filter((slot) => slot?.id)
+              .map((slot) => deleteTimeSlot(slot.id)),
+          )
+          throw error
+        }
       } else if (currentStep === 2) {
         if (!fileForm) throw new Error('Please select a PDF file')
         const res = await uploadMaterial(fileForm, createdGoal?.id)
@@ -272,6 +344,7 @@ const PlanningPage = () => {
   const stateContext = {
     goalForm, setGoalForm,
     timeSlotsForm, setTimeSlotsForm,
+    existingTimeSlots, isLoadingTimeSlots,
     fileForm, setFileForm,
     parsedMaterial, errorMsg,
     editablePlan, setEditablePlan,
