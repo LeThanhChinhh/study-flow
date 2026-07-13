@@ -4,6 +4,7 @@ import com.studyflow.core.dtos.auth.AuthResponse;
 import com.studyflow.core.dtos.auth.AuthUserResponse;
 import com.studyflow.core.dtos.auth.LoginRequest;
 import com.studyflow.core.dtos.auth.RegisterRequest;
+import com.studyflow.core.dtos.auth.UpdateUsernameRequest;
 import com.studyflow.core.services.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -34,5 +35,13 @@ public class AuthController {
     @GetMapping("/me")
     public UserProfileResponse me(Authentication authentication) {
         return authService.getCurrentUser(authentication);
+    }
+
+    @PatchMapping("/me/username")
+    public UserProfileResponse updateUsername(
+            Authentication authentication,
+            @Valid @RequestBody UpdateUsernameRequest request
+    ) {
+        return authService.updateUsername(authentication, request);
     }
 }

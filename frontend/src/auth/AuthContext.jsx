@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
@@ -23,6 +23,10 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
     }
   };
+
+  const updateUser = useCallback((nextUser) => {
+    setUser((currentUser) => ({ ...currentUser, ...nextUser }));
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('accessToken');
@@ -97,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     clearError,
   };
 

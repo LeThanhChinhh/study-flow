@@ -8,6 +8,10 @@ export const getQuizzesByTask = (taskId) => {
   return apiClient.get(`/api/v1/quizzes/by-task/${taskId}`);
 };
 
+export const getQuizReview = (taskId) => {
+  return apiClient.get(`/api/v1/quizzes/review/by-task/${taskId}`);
+};
+
 export const submitQuiz = (payload) => {
   return apiClient.post('/api/v1/quizzes/submit', payload);
 };

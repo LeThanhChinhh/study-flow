@@ -154,7 +154,6 @@ const CalendarPage = () => {
   const goToToday    = () => setWeekAnchor(new Date())
 
   const defaultDate = useMemo(() => {
-    const today = new Date()
     const isTodayInWeek = weekDays.some(d => formatLocalDate(d) === todayStr)
     return isTodayInWeek ? todayStr : formatLocalDate(weekStart)
   }, [weekDays, todayStr, weekStart])
@@ -521,6 +520,7 @@ const CalendarPage = () => {
       </footer>
       {/*  Task Detail Modal  */}
       <CalendarTaskDetailModal
+        key={selectedTask?.id || 'closed-task-detail'}
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={handleTaskUpdated}

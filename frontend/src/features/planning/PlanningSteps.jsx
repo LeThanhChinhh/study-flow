@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import StudyIcon, { IconBadge } from '../../components/StudyIcon'
+import StudyIcon from '../../components/StudyIcon'
 import { DAY_LABELS } from './planningConstants'
 import { formatTime12Hour, formatLocalDate, getDayOfWeekForDate } from './planningUtils'
 import EditablePlanStep from './EditablePlanStep'

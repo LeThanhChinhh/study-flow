@@ -4,8 +4,10 @@ import com.studyflow.core.dtos.auth.AuthResponse;
 import com.studyflow.core.dtos.auth.AuthUserResponse;
 import com.studyflow.core.dtos.auth.LoginRequest;
 import com.studyflow.core.dtos.auth.RegisterRequest;
+import com.studyflow.core.dtos.auth.UpdateUsernameRequest;
 import com.studyflow.core.entities.User;
 import com.studyflow.core.entities.UserSettings;
+import com.studyflow.core.exceptions.ConflictException;
 import com.studyflow.core.repositories.UserRepository;
 import com.studyflow.core.repositories.UserSettingsRepository;
 import com.studyflow.core.security.JwtService;
@@ -41,7 +43,7 @@ public class AuthService {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase();
 
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
 
@@ -68,10 +70,10 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        String identifier = request.identifier().trim().toLowerCase();
+        String identifier = request.identifier().trim();
 
-        User user = userRepository.findByEmail(identifier)
-                .or(() -> userRepository.findByUsername(identifier))
+        User user = userRepository.findByEmail(identifier.toLowerCase())
+                .or(() -> userRepository.findByUsernameIgnoreCase(identifier))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         boolean passwordMatches = passwordEncoder.matches(
@@ -86,6 +88,33 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user);
 
         return AuthResponse.of(accessToken, AuthUserResponse.from(user));
+    }
+
+    @Transactional
+    public UserProfileResponse updateUsername(
+            Authentication authentication,
+            UpdateUsernameRequest request
+    ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException("Unauthenticated");
+        }
+
+        UUID userId = UUID.fromString(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        String username = request.username().trim();
+        if (username.equals(user.getUsername())) {
+            return UserProfileResponse.from(user);
+        }
+
+        if (userRepository.existsByUsernameIgnoreCaseAndIdNot(username, userId)) {
+            throw new ConflictException("Username already exists");
+        }
+
+        user.setUsername(username);
+        User savedUser = userRepository.save(user);
+        return UserProfileResponse.from(savedUser);
     }
 
     @Transactional(readOnly = true)

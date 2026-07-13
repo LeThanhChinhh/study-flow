@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import StudyIcon from '../../components/StudyIcon';
 import { getTimeSlots, createTimeSlot, updateTimeSlot, deleteTimeSlot } from '../../api/timeSlotApi';
 
@@ -33,11 +33,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
   const [deleteError, setDeleteError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchSlots();
-  }, []);
-
-  const fetchSlots = async () => {
+  const fetchSlots = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -55,7 +51,11 @@ const TimeSlotEditorModal = ({ onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSlots();
+  }, [fetchSlots]);
 
   const handleEdit = (slot) => {
     setEditingId(slot.id);

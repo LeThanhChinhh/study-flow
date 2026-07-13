@@ -35,7 +35,7 @@ const calculateDurationMinutes = (startTime, endTime) => {
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1)
     if (diff < 0) diff += 24 * 60
     return diff
-  } catch (e) {
+  } catch {
     return 25
   }
 }

@@ -20,14 +20,13 @@ public class QuizController {
     }
 
     /**
-     * Sinh bộ câu hỏi trắc nghiệm (Mock) cho một Task cụ thể.
+     * Sinh bộ câu hỏi trắc nghiệm bằng AI cho một Task cụ thể.
      * Endpoint: POST /api/v1/quizzes/generate
      */
     @PostMapping("/generate")
     public ResponseEntity<List<QuizResponse>> generateQuiz(
             @Valid @RequestBody QuizGenerateRequest request
     ) {
-        // Logic sinh quiz mock được xử lý tại Service
         List<QuizResponse> response = quizService.generateQuiz(request.taskId());
         return ResponseEntity.ok(response);
     }
@@ -44,6 +43,17 @@ public class QuizController {
         // Service sẽ kiểm tra quyền sở hữu Task trước khi trả về Quiz
         List<QuizResponse> response = quizService.getQuizByTask(taskId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Xem lại lần trả lời gần nhất của từng câu hỏi trong một Task.
+     * Endpoint: GET /api/v1/quizzes/review/by-task/{taskId}
+     */
+    @GetMapping("/review/by-task/{taskId}")
+    public ResponseEntity<QuizReviewResponse> getQuizReview(
+            @PathVariable UUID taskId
+    ) {
+        return ResponseEntity.ok(quizService.getQuizReview(taskId));
     }
 
     /**
