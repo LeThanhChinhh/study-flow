@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import StudyIcon from '../../components/StudyIcon';
 import { getTimeSlots, createTimeSlot, updateTimeSlot, deleteTimeSlot } from '../../api/timeSlotApi';
+import { findOverlap } from '../planning/timeSlotValidation';
 
 const DAYS = [
   { value: 1, label: 'Monday' },
@@ -109,6 +110,9 @@ const TimeSlotEditorModal = ({ onClose }) => {
     }
     if (formState.startTime >= formState.endTime) {
       return 'Start time must be before end time.';
+    }
+    if (findOverlap(formState, timeSlots, editingId)) {
+      return 'This time slot overlaps with an existing availability window.';
     }
     return null;
   };

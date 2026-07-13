@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/studyflow_db}
+    username: ${SPRING_DATASOURCE_USERNAME:studyflow_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:secretpassword}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:studyflow-local-dev-secret-key-must-be-at-least-32-characters}
+
+studyflow:
+  ai:
+    planning:
+      provider: ${STUDYFLOW_AI_PLANNING_PROVIDER:mock}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
