@@ -107,10 +107,10 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focuse
       aria-label="Current task"
       className="card p-6 flex flex-col gap-5 relative overflow-hidden"
     >
-      {/* Subtle violet top edge highlight */}
+
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent"/>
 
-      {/* Header */}
+
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
           <StudyIcon name="book-open" size={17} className="text-violet-600"/>
@@ -123,7 +123,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focuse
         </div>
       </div>
 
-      {/* Subject + duration chips */}
+
       <div className="flex flex-wrap gap-2">
         <span className="badge bg-violet-100 text-violet-700">
           <StudyIcon name="target" size={11} className="text-violet-500"/>
@@ -150,7 +150,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focuse
         )}
       </div>
 
-      {/* Session intentions */}
+
       <div>
         <p className="text-[10.5px] font-semibold uppercase tracking-widest text-stone-400 mb-3">
           Session Intentions
@@ -167,7 +167,7 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focuse
         </ul>
       </div>
 
-      {/* Progress */}
+
       {targetMinutes > 0 && (
         <div className="mt-2 pt-4 border-t border-stone-100">
           <div className="flex justify-between text-xs mb-1.5">
@@ -175,8 +175,8 @@ export const CurrentTaskPanel = ({ currentTask, isTaskLoading, taskError, focuse
             <span className="text-stone-500">{remainingMinutes} min remaining</span>
           </div>
           <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden flex">
-            <div 
-              className="h-full bg-violet-500 transition-all duration-500 ease-out rounded-full" 
+            <div
+              className="h-full bg-violet-500 transition-all duration-500 ease-out rounded-full"
               style={{ width: `${Math.min(100, Math.max(0, (focusedMinutes / targetMinutes) * 100))}%` }}
             />
           </div>
@@ -197,7 +197,7 @@ export const SupportPanel = () => {
       aria-label="Session support info"
       className="flex flex-col gap-4"
     >
-      {/* Focus tip */}
+
       <div className="card p-5 flex flex-col gap-3 relative overflow-hidden">
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent"/>
 
@@ -213,7 +213,7 @@ export const SupportPanel = () => {
         <p className="text-xs text-stone-400 italic">{BREAK_SUGGESTION}</p>
       </div>
 
-      {/* Active Recall hint */}
+
       <div className="card p-5 flex flex-col gap-3 relative overflow-hidden">
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-200/50 to-transparent"/>
 

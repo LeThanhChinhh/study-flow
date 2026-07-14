@@ -15,7 +15,7 @@ const CalendarCreateTaskModal = ({
   const [scheduledDate, setScheduledDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -28,7 +28,7 @@ const CalendarCreateTaskModal = ({
       setEndTime('')
       setError(null)
       setIsSubmitting(false)
-      
+
       const handleEscape = (e) => {
         if (e.key === 'Escape') onClose()
       }
@@ -64,7 +64,7 @@ const CalendarCreateTaskModal = ({
     try {
       setIsSubmitting(true)
       setError(null)
-      
+
       const payload = {
         goalId,
         title: trimmedTitle,
@@ -92,7 +92,7 @@ const CalendarCreateTaskModal = ({
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={handleBackdropClick}
       role="dialog"
@@ -100,8 +100,8 @@ const CalendarCreateTaskModal = ({
       aria-labelledby="create-task-title"
     >
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Header */}
+
+
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/50">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
@@ -109,7 +109,7 @@ const CalendarCreateTaskModal = ({
             </div>
             <h2 id="create-task-title" className="text-base font-semibold text-stone-800">Add task</h2>
           </div>
-          <button 
+          <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
@@ -120,9 +120,9 @@ const CalendarCreateTaskModal = ({
           </button>
         </div>
 
-        {/* Body */}
+
         <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-stone-50/30">
-          
+
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm flex gap-3">
               <StudyIcon name="alert-triangle" size={16} className="shrink-0 mt-0.5" />

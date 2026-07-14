@@ -111,10 +111,10 @@ const FocusTimer = ({
 
   return (
     <div className="card p-8 flex flex-col items-center gap-8 relative overflow-hidden w-full max-w-sm mx-auto">
-      {/* Subtle top highlight */}
+
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/50 to-transparent"/>
 
-      {/* Ring + time display */}
+
       <div
         className={`relative flex items-center justify-center ${isTimerActive ? 'animate-timer-breathe' : ''}`}
         style={{ width: 280, height: 280 }}
@@ -127,38 +127,38 @@ const FocusTimer = ({
           aria-hidden="true"
         >
           <defs>
-            {/* Ready — neutral violet */}
+
             <linearGradient id="focusGradReady" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#c4b5fd"/>
               <stop offset="100%" stopColor="#a78bfa"/>
             </linearGradient>
-            {/* Active — vibrant violet to rose */}
+
             <linearGradient id="focusGradActive" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#7c3aed"/>
               <stop offset="100%" stopColor="#fb7185"/>
             </linearGradient>
-            {/* Paused — muted amber */}
+
             <linearGradient id="focusGradPaused" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#fbbf24"/>
               <stop offset="100%" stopColor="#f59e0b"/>
             </linearGradient>
-            {/* Break Active — teal to emerald */}
+
             <linearGradient id="breakGradActive" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#14b8a6"/>
               <stop offset="100%" stopColor="#10b981"/>
             </linearGradient>
-            {/* Break Paused — muted teal */}
+
             <linearGradient id="breakGradPaused" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#5eead4"/>
               <stop offset="100%" stopColor="#34d399"/>
             </linearGradient>
-            {/* Soft shadow filter for the ring */}
+
             <filter id="ringShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={isBreaking ? '#14b8a6' : '#7c3aed'} floodOpacity="0.18"/>
             </filter>
           </defs>
 
-          {/* Track */}
+
           <circle
             cx="140" cy="140" r={RING_RADIUS}
             fill="none"
@@ -413,8 +413,8 @@ const FocusTimer = ({
 
       {/* Mode label */}
       <p className="text-xs text-stone-400 -mt-4">
-        {isBreaking || isBreakPaused 
-          ? `Break · ${Math.max(1, Math.round(totalTime / 60))} min session` 
+        {isBreaking || isBreakPaused
+          ? `Break · ${Math.max(1, Math.round(totalTime / 60))} min session`
           : `Pomodoro · ${Math.max(1, Math.round(totalTime / 60))} min session${isFinalSession ? ' (Final)' : ''}`}
       </p>
     </div>

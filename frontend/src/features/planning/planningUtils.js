@@ -1,4 +1,4 @@
-// ─── Date / time helpers ────────────────────────────────────────────────────
+//  Date / time helpers 
 
 export const formatTime12Hour = (time) => {
   if (!time) return ''
@@ -95,7 +95,7 @@ export const getSuggestedDayOfWeekForGoal = (startDate, deadline) => {
   return getDayOfWeekForDate(effectiveStart)
 }
 
-// ─── Editable-plan helpers ───────────────────────────────────────────────────
+//  Editable-plan helpers 
 
 /**
  * Deep-clone rawJson into a local editable plan structure.

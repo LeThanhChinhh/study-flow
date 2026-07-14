@@ -37,7 +37,7 @@ const QuizQuestion = ({ quiz, index, selectedOptionId, onSelect }) => {
         </p>
       </div>
 
-      {/* Options */}
+
       <div className="flex flex-col gap-2 pl-10" role="radiogroup" aria-label={`Question ${index + 1} options`}>
         {quiz.options.map((opt, optIdx) => {
           const optId = getOptionId(opt)
@@ -243,7 +243,7 @@ const QuizModal = ({
             className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent"
           />
 
-          {/* Header */}
+
           <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
@@ -281,7 +281,7 @@ const QuizModal = ({
           {/* Divider */}
           <div className="mx-6 h-px bg-stone-100" />
 
-          {/* Body */}
+
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             {result ? (
               <QuizResult result={result} onBackToDashboard={onBackToDashboard} />
@@ -310,7 +310,7 @@ const QuizModal = ({
                   </div>
                 )}
 
-                {/* Empty state */}
+
                 {totalQuestions === 0 && !error && (
                   <div className="flex flex-col items-center gap-3 py-8 text-stone-400">
                     <StudyIcon name="timer" size={28} className="animate-spin text-violet-400" />

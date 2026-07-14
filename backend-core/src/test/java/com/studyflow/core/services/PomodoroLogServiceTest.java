@@ -57,6 +57,37 @@ class PomodoroLogServiceTest {
     }
 
     @Test
+    void createPomodoroLogRejectsFocusMinutesAboveConfiguredMaximum() {
+        PomodoroLogRequest request = request(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                91,
+                0,
+                0,
+                "COMPLETED"
+        );
+
+        assertThatThrownBy(() -> pomodoroLogService.createPomodoroLog(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("focusMinutes must not exceed 90");
+    }
+
+    @Test
+    void createPomodoroLogRejectsEndTimeBeforeStartTime() {
+        UUID taskId = UUID.randomUUID();
+        Task task = task(taskId, userId);
+        PomodoroLogRequest request = request(taskId, UUID.randomUUID(), 25, 0, 0, "COMPLETED");
+        request.setStartTime(OffsetDateTime.now());
+        request.setEndTime(OffsetDateTime.now().minusMinutes(1));
+
+        when(taskRepository.findByIdAndUserId(taskId, userId)).thenReturn(Optional.of(task));
+
+        assertThatThrownBy(() -> pomodoroLogService.createPomodoroLog(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("endTime must not be before startTime");
+    }
+
+    @Test
     void createPomodoroLogUsesClientSessionIdForIdempotency() {
         UUID taskId = UUID.randomUUID();
         UUID clientSessionId = UUID.randomUUID();

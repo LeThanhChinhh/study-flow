@@ -27,7 +27,7 @@ const EditablePlanStep = ({ editablePlan, setEditablePlan, planErrors }) => {
   const totalMins = allTasks.reduce((sum, t) => sum + (Number(t.estimatedMinutes) || 25), 0)
   const totalHoursLabel = totalMins < 60 ? '<1' : (totalMins / 60).toFixed(1).replace('.0', '')
 
-  // ── module-level helpers ──────────────────────────────────────────────────
+  //  module-level helpers 
 
   const updateModuleTitle = (mIdx, newTitle) => {
     setEditablePlan((prev) => ({
@@ -45,7 +45,7 @@ const EditablePlanStep = ({ editablePlan, setEditablePlan, planErrors }) => {
     }))
   }
 
-  // ── task-level helpers ────────────────────────────────────────────────────
+  //  task-level helpers 
 
   const updateTaskField = (mIdx, tIdx, field, value) => {
     setEditablePlan((prev) => ({
@@ -161,7 +161,7 @@ const EditablePlanStep = ({ editablePlan, setEditablePlan, planErrors }) => {
                 </button>
               </div>
 
-              {/* Task list */}
+
               <div className="space-y-2 pl-2 border-l-2 border-stone-100">
                 {mod.tasks.map((task, tIdx) => (
                   <div
@@ -172,7 +172,7 @@ const EditablePlanStep = ({ editablePlan, setEditablePlan, planErrors }) => {
                       {tIdx + 1}
                     </span>
 
-                    {/* Task title */}
+
                     <input
                       className="flex-1 text-sm font-medium text-stone-700 bg-transparent border-b border-transparent hover:border-stone-200 focus:border-violet-300 focus:outline-none px-0.5 py-0.5 min-w-0 transition-colors"
                       value={task.title}

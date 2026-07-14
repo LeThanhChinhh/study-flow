@@ -92,15 +92,15 @@ const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = fal
       aria-label={`View details for: ${task.title}`}
       {...(canDrag ? { ...listeners, ...attributes } : {})}
     >
-      {/* Title row */}
+
       <div className="flex flex-col items-start min-w-0 w-full">
         <div className="flex items-start gap-1.5 min-w-0 w-full">
-          {/* Status dot */}
+
           <span
             className={`w-1.5 h-1.5 rounded-full mt-[5px] shrink-0 ${cfg.dot}`}
             aria-hidden="true"
           />
-          <p 
+          <p
             className={`text-xs leading-snug truncate flex-1 min-w-0 ${cfg.title}`}
             title={task.title}
           >
@@ -114,7 +114,7 @@ const CalendarTaskCard = React.memo(({ task, onClick, isMoving, enableDrag = fal
         )}
       </div>
 
-      {/* Time range + badge row */}
+
       <div className="flex items-center gap-1 mt-1 pl-3 min-w-0 flex-wrap">
         {timeRange ? (
           <span className="text-[10px] text-stone-400 tabular-nums shrink-0 flex items-center gap-0.5 max-w-full">

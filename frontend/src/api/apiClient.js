@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim()
+  || (import.meta.env.DEV ? 'http://localhost:8080' : '');
 const ACCESS_TOKEN_KEY = 'accessToken';
 
 const apiClient = axios.create({
@@ -10,9 +11,6 @@ const apiClient = axios.create({
   },
 });
 
-/**
- * Gắn JWT token vào mọi request nếu user đã đăng nhập.
- */
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -26,10 +24,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/**
- * Chuẩn hóa response và error để các page/context dùng dễ hơn.
- * Lưu ý: response thành công sẽ trả thẳng response.data.
- */
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {

@@ -8,7 +8,7 @@ export const AppNav = ({ user, onLogout, onOpenProfile }) => (
   <nav id="dashboard-nav" className="nav-glass sticky top-0 z-20">
     <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
 
-      {/* Brand */}
+
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm">
           <StudyIcon name="layers" size={15} className="text-white" />
@@ -16,7 +16,7 @@ export const AppNav = ({ user, onLogout, onOpenProfile }) => (
         <span className="text-stone-800 text-base font-bold tracking-tight">StudyFlow</span>
       </div>
 
-      {/* Current goal chip */}
+
       <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 rounded-full border border-violet-100/80">
         <StudyIcon name="target" size={12} className="text-violet-500" />
         <span className="text-xs font-medium text-violet-700 truncate max-w-[180px]">
@@ -24,14 +24,14 @@ export const AppNav = ({ user, onLogout, onOpenProfile }) => (
         </span>
       </div>
 
-      {/* Right side */}
+
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={onOpenProfile}
           className="flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-xl hover:bg-stone-50 transition-colors text-left"
           aria-label="Open profile settings"
         >
-          {/* Avatar */}
+
           <div
             className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-bold select-none uppercase shadow-sm ring-2 ring-white"
           >
@@ -63,18 +63,18 @@ export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTas
   return (
     <header className="mb-8 animate-slide-up">
 
-      {/* Date pill */}
+
       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/70 border border-stone-100 shadow-sm mb-4">
         <StudyIcon name={icon} size={13} className="text-amber-400" strokeWidth={1.5} />
         <p className="text-xs text-stone-500 font-medium">{TODAY_STR}</p>
       </div>
 
-      {/* Headline */}
+
       <h1 className="text-3xl sm:text-4xl font-bold text-stone-800 tracking-tight mb-2 leading-tight">
         {word}, {user?.username || user?.name || 'Student'}.
       </h1>
 
-      {/* Sub-line with remaining tasks */}
+
       <p className="text-stone-500 text-sm mb-6 max-w-md leading-relaxed">
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
@@ -92,7 +92,7 @@ export const GreetingSection = ({ user, onStartFocus, onCreateGoal, remainingTas
         )}
       </p>
 
-      {/* Hero CTAs */}
+
       <div className="flex flex-wrap items-center gap-3">
         <button id="cta-start-focus" className="btn-accent" onClick={onStartFocus}>
           <StudyIcon name="play" size={14} strokeWidth={2.5} />
@@ -137,10 +137,10 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
       aria-label="Today's learning flow"
       className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden min-h-[420px] lg:h-[420px]"
     >
-      {/* Subtle inner highlight */}
+
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/60 to-transparent" />
 
-      {/* Header */}
+
       <div className="flex items-start justify-between shrink-0">
         <div className="flex items-center gap-3">
           <IconBadge name="book-open" bg="bg-violet-100" icon="text-violet-600" badgeSize="w-9 h-9" />
@@ -159,10 +159,10 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
         )}
       </div>
 
-      {/* States */}
+
       <div className="flex-1 flex flex-col min-h-0">
 
-        {/* Loading skeleton */}
+
         {isLoading && (
           <div className="space-y-4 flex-1 flex flex-col justify-center">
             {[1, 2, 3].map(i => (
@@ -177,7 +177,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
           </div>
         )}
 
-        {/* Error state */}
+
         {!isLoading && error && (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
@@ -230,7 +230,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
               <StudyIcon name="calendar" size={24} className="text-stone-300 mb-2" />
               <p className="text-sm text-stone-500">No tasks scheduled for today.</p>
             </div>
-            
+
             <div className="bg-stone-50/50 rounded-xl p-4 border border-stone-100">
               <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Upcoming tasks</h3>
               <ul className="space-y-3">
@@ -238,8 +238,8 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                   const isDone = task.status === 'done'
 
                   return (
-                    <li 
-                      key={task.id} 
+                    <li
+                      key={task.id}
                       className={`flex flex-col gap-1 p-2 -mx-2 rounded-xl transition-colors ${
                         isDone
                           ? 'opacity-60 cursor-default'
@@ -286,7 +286,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
           </div>
         )}
 
-        {/* Task list */}
+
         {!isLoading && !error && tasks.length > 0 && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar today-flow-scroll pr-2 min-h-0">
             <ul className="space-y-0" role="list">
@@ -294,21 +294,21 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
               const isLast = idx === tasks.length - 1
               const isDone = task.status === 'done'
               return (
-                <li 
-                  key={task.id} 
+                <li
+                  key={task.id}
                   className={`flex gap-3 group ${
                     isDone ? 'cursor-default opacity-70' : 'cursor-pointer'
                   }`}
                   onClick={() => !isDone && onTaskClick?.(task.id)}
                   aria-disabled={isDone}
                 >
-                  {/* Connector */}
+
                   <div className="flex flex-col items-center">
                     <TaskDot status={task.status} />
                     {!isLast && <div className="w-px flex-1 mt-1.5 bg-stone-100 group-hover:bg-stone-200 transition-colors" />}
                   </div>
 
-                  {/* Row content */}
+
                   <div className={`task-row flex-1 min-w-0 ${isLast ? 'pb-0' : 'pb-3'}`}>
                     <div
                       className={`task-row-inner flex-1 transition-colors rounded-xl px-2 py-2 -my-1 min-w-0 ${
@@ -319,7 +319,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                     >
                       <div className="min-w-0 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p 
+                          <p
                             className={`text-sm leading-snug truncate ${
                               isDone             ? 'line-through text-stone-400' :
                               task.status === 'active' ? 'text-violet-700 font-semibold' :
@@ -335,7 +335,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
                             {task.startTime ? ` · ${task.startTime}` : ''}
                           </p>
                         </div>
-                        {/* Status badges */}
+
                         <div className="shrink-0 mt-0.5">
                           {task.status === 'active' && (
                             <span className="badge bg-violet-100 text-violet-600">In progress</span>
@@ -358,7 +358,7 @@ export const TodayFlowCard = ({ tasks = [], upcomingTasks = [], isLoading = fals
         )}
       </div>
 
-      {/* Progress bar — only when tasks exist */}
+
       {!isLoading && !error && tasks.length > 0 && (
         <div className="pt-3 border-t border-stone-100/50 shrink-0">
           <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
@@ -381,7 +381,7 @@ export const PomodoroRing = () => {
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
       <svg viewBox="0 0 120 120" width="144" height="144" className="-rotate-90" aria-hidden="true">
-        {/* Track */}
+
         <circle
           cx="60" cy="60" r={r}
           fill="none"
@@ -389,7 +389,7 @@ export const PomodoroRing = () => {
           strokeWidth="7"
           className="pomodoro-track"
         />
-        {/* Progress ring — full = ready to start */}
+
         <circle
           cx="60" cy="60" r={r}
           fill="none"
@@ -423,13 +423,13 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
     aria-label="Focus session"
     className="card card-hover p-6 flex flex-col items-center gap-5 text-center relative overflow-hidden min-h-[420px] lg:h-[420px]"
   >
-    {/* Ambient rose tint at bottom */}
+
     <div
       aria-hidden="true"
       className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
       style={{ background: 'radial-gradient(ellipse at 50% 100%, rgba(251,113,133,0.08) 0%, transparent 70%)' }}
     />
-    {/* Inner top highlight */}
+
     <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-200/50 to-transparent" />
 
     <div className="flex items-center gap-3 w-full">
@@ -442,7 +442,7 @@ export const FocusSessionCard = ({ onStartFocus, onCreateGoal, activeTask }) => 
 
     <PomodoroRing />
 
-    {/* Next task */}
+
     {activeTask ? (
       <>
         <div className="w-full px-4 py-3 bg-stone-50/80 rounded-xl border border-stone-100 text-left">
@@ -484,7 +484,7 @@ export const StudyStreakCard = ({
 
   return (
     <section aria-label="Study streak" className="card card-hover p-6 flex flex-col gap-5 relative overflow-hidden h-full">
-      {/* Subtle amber warmth glow */}
+
       <div
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 h-24 pointer-events-none"
@@ -578,7 +578,7 @@ export const LearningProgressCard = ({ user, tasks = [], todayTasks = [], onCrea
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Overall progress */}
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-stone-700">All Tasks</span>
@@ -599,7 +599,7 @@ export const LearningProgressCard = ({ user, tasks = [], todayTasks = [], onCrea
               <p className="text-xs text-stone-500 mt-2">{progressPercent}% complete</p>
             </div>
 
-            {/* Today stats */}
+
             {todayTotal > 0 && (
               <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">

@@ -4,8 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -40,6 +44,46 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleMalformedRequest() {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Malformed request body"
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded() {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "Uploaded file is too large"
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadCredentials() {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Invalid credentials"
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception
+    ) {
+        log.warn("Database constraint violation", exception);
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                "Request conflicts with existing data"
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -99,32 +143,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
-    /**
-     * Xử lý lỗi IllegalStateException (ví dụ từ GeminiQuizClient)
-     */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalStateException(
             IllegalStateException exception
     ) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String message = exception.getMessage();
-
-        if (message != null) {
-            if (message.contains("temporarily unavailable") || message.contains("Gemini API")) {
-                status = HttpStatus.SERVICE_UNAVAILABLE;
-            } else if (message.contains("chưa xác thực")) {
-                status = HttpStatus.UNAUTHORIZED;
-            } else {
-                status = HttpStatus.BAD_REQUEST;
-            }
+        if (message != null
+                && (message.contains("temporarily unavailable") || message.contains("Gemini API"))) {
+            log.warn("AI service unavailable: {}", message);
+            ApiErrorResponse response = ApiErrorResponse.of(
+                    HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    "AI service is temporarily unavailable. Please try again."
+            );
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
         }
 
-        ApiErrorResponse response = ApiErrorResponse.of(
-                status.value(),
-                message
-        );
+        if (message != null && message.contains("chưa xác thực")) {
+            ApiErrorResponse response = ApiErrorResponse.of(
+                    HttpStatus.UNAUTHORIZED.value(),
+                    "Unauthenticated"
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
 
-        return ResponseEntity.status(status).body(response);
+        log.error("Unexpected application state", exception);
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal server error"
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     /**

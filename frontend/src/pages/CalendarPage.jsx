@@ -299,10 +299,10 @@ const CalendarPage = () => {
     <div className="min-h-screen">
       <AppBackground variant="calendar" />
 
-      {/*  Top navigation bar  */}
+
       <nav className="nav-glass sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-          {/* Brand */}
+
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm">
               <StudyIcon name="layers" size={15} className="text-white" />
@@ -310,13 +310,13 @@ const CalendarPage = () => {
             <span className="text-stone-800 text-base font-bold tracking-tight">StudyFlow</span>
           </div>
 
-          {/* Page label pill */}
+
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 rounded-full border border-violet-100/80">
             <StudyIcon name="calendar" size={12} className="text-violet-500" />
             <span className="text-xs font-medium text-violet-700">Calendar</span>
           </div>
 
-          {/* Back to Dashboard */}
+
           <button
             onClick={() => navigate('/dashboard')}
             className="btn-ghost text-xs px-3 py-[0.45rem]"
@@ -328,7 +328,7 @@ const CalendarPage = () => {
         </div>
       </nav>
 
-      {/*  Main content  */}
+
       <main className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/*  Drag-drop error banner  */}
@@ -349,7 +349,7 @@ const CalendarPage = () => {
           </div>
         )}
 
-        {/*  Error state  */}
+
         {!isLoading && error && (
           <div className="card p-10 flex flex-col items-center justify-center text-center gap-4">
             <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center">
@@ -395,11 +395,11 @@ const CalendarPage = () => {
           </div>
         )}
 
-        {/*  Calendar content  */}
+
         {!error && (isLoading || hasAnyTasks || hasAnyGoals || isGoalFiltered) && (
           <div className="space-y-5">
 
-            {/* Week navigation header */}
+
             <div className="card p-4">
               <WeekNavHeader
                 weekStart={weekStart}
@@ -426,7 +426,7 @@ const CalendarPage = () => {
 
             {/* 7-column week grid — wrapped in DndContext */}
             <div className="card p-4 relative">
-              {/* Subtle gradient separator */}
+
               <div
                 aria-hidden="true"
                 className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/50 to-transparent rounded-t-2xl"
@@ -511,14 +511,14 @@ const CalendarPage = () => {
 
       </main>
 
-      {/*  Footer  */}
+
       <footer className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-stone-200/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-stone-400">© 2026 StudyFlow</p>
           <p className="text-xs text-stone-300">v0.1.0</p>
         </div>
       </footer>
-      {/*  Task Detail Modal  */}
+
       <CalendarTaskDetailModal
         key={selectedTask?.id || 'closed-task-detail'}
         task={selectedTask}
@@ -527,7 +527,7 @@ const CalendarPage = () => {
         onTaskDeleted={handleTaskDeleted}
       />
 
-      {/*  Create Task Modal  */}
+
       <CalendarCreateTaskModal
         isOpen={isCreateTaskOpen}
         goals={goals}

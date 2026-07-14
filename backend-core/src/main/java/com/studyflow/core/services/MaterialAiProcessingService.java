@@ -48,7 +48,7 @@ public class MaterialAiProcessingService {
         try {
             Map<String, Object> rawAiResult = planningAiClient.generatePlanning(request);
             PlanningAiResult normalizedResult = planningAiResultNormalizer.normalize(rawAiResult);
-            
+
             material.setRawJson(normalizedResult.normalizedRawJson());
             material.setStatus("COMPLETED");
             log.info("Successfully completed AI processing for materialId={}", materialId);
@@ -57,7 +57,7 @@ public class MaterialAiProcessingService {
             material.setRawJson(null);
             material.setStatus("FAILED");
         } catch (Exception e) {
-            log.error("Unexpected error during AI processing for materialId={}: {}", materialId, e.getMessage());
+            log.error("Unexpected error during AI processing for materialId={}", materialId, e);
             material.setRawJson(null);
             material.setStatus("FAILED");
         }

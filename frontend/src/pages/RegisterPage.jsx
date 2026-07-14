@@ -25,7 +25,7 @@ const getStrength = (pw) => {
 const RegisterPage = () => {
   const navigate = useNavigate()
   const { register, isLoading, error, clearError } = useAuth()
-  
+
   const [formData, setFormData]       = useState({
     username: '', email: '', password: '', confirmPassword: '',
   })
@@ -51,23 +51,23 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (mismatch) {
       setLocalError("Passwords do not match.")
       return
     }
-    
+
     if (!formData.username || !formData.email || !formData.password) {
       setLocalError("Please fill in all fields.")
       return
     }
-    
+
     const payload = {
       username: formData.username,
       email: formData.email,
       password: formData.password,
     }
-    
+
     try {
       const data = await register(payload)
       // Navigate based on whether the API logs us in automatically
@@ -85,7 +85,7 @@ const RegisterPage = () => {
 
   return (
     <AuthLayout>
-      {/*  Header  */}
+
       <header className="mb-7">
         <h1 className="text-2xl font-bold text-stone-800 tracking-tight mb-1.5">
           Create your StudyFlow account
@@ -95,7 +95,7 @@ const RegisterPage = () => {
         </p>
       </header>
 
-      {/* Error Banner */}
+
       {(error || localError) && (
         <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
           <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
@@ -103,10 +103,10 @@ const RegisterPage = () => {
         </div>
       )}
 
-      {/*  Form  */}
+
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
-        {/* Username */}
+
         <div>
           <label
             htmlFor="register-username"
@@ -127,7 +127,7 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Email */}
+
         <div>
           <label
             htmlFor="register-email"
@@ -148,7 +148,7 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Password */}
+
         <div>
           <label
             htmlFor="register-password"
@@ -157,7 +157,7 @@ const RegisterPage = () => {
             Password
           </label>
           <div className="relative">
-            {/* Password Policy Tooltip (Left Side) */}
+
             <div
               className={`absolute top-0 right-[calc(100%+1.5rem)] w-[240px] p-4 bg-white border border-stone-100 shadow-card-lg rounded-2xl transition-all duration-300 z-30 hidden md:block ${
                 pwFocused || (formData.password.length > 0 && strength?.label !== 'Strong')
@@ -187,7 +187,7 @@ const RegisterPage = () => {
                   </li>
                 ))}
               </ul>
-              {/* Tooltip Arrow */}
+
               <div className="absolute top-[18px] -right-[5px] w-[10px] h-[10px] bg-white border-t border-r border-stone-100 rotate-45 transform origin-center" />
             </div>
 
@@ -214,7 +214,7 @@ const RegisterPage = () => {
             </button>
           </div>
 
-          {/* Strength meter */}
+
           {strength && (
             <div className="mt-2 flex items-center gap-2" aria-live="polite">
               <div className="relative flex-1 h-1 bg-stone-100 rounded-full overflow-hidden">
@@ -229,7 +229,7 @@ const RegisterPage = () => {
           )}
         </div>
 
-        {/* Confirm password */}
+
         <div>
           <label
             htmlFor="register-confirmPassword"
@@ -265,7 +265,7 @@ const RegisterPage = () => {
           )}
         </div>
 
-        {/* Submit */}
+
         <div className="pt-1">
           <button id="register-submit-btn" type="submit" className="btn-primary" disabled={isLoading || mismatch}>
             {isLoading ? 'Creating account...' : 'Create account'}
@@ -273,7 +273,7 @@ const RegisterPage = () => {
         </div>
       </form>
 
-      {/*  Switch to login  */}
+
       <p className="mt-6 text-center text-sm text-stone-500">
         Already have an account?{' '}
         <Link
@@ -284,7 +284,7 @@ const RegisterPage = () => {
         </Link>
       </p>
 
-      {/*  Legal  */}
+
       <div className="mt-6 pt-6 border-t border-stone-100">
         <p className="text-xs text-stone-400 text-center leading-relaxed">
           By creating an account, you agree to our{' '}

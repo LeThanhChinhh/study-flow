@@ -32,7 +32,7 @@ const shiftLocalDateKey = (dateKey, days) => {
 /**
  * Calculates study streaks from completed Pomodoro logs.
  *
- * MVP rule: one or more completed focus sessions in a local calendar day counts
+ * rule: one or more completed focus sessions in a local calendar day counts
  * as one study day. A streak remains active when the latest study day is today
  * or yesterday, so users have the full current day to continue it.
  */
