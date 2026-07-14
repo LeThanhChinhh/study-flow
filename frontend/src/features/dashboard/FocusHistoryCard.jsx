@@ -77,7 +77,7 @@ const FocusHistoryCard = ({
     }
 
     const taskMap = new Map(tasks.map(t => [t.id, t.title]))
-    
+
     const now = new Date()
     const startOfWeek = getStartOfWeek(now)
     const endOfWeek = new Date(startOfWeek)
@@ -126,7 +126,7 @@ const FocusHistoryCard = ({
 
     for (const log of validLogs) {
       const focusMins = Number.isFinite(log.focusMinutes) && log.focusMinutes > 0 ? log.focusMinutes : 0
-      
+
       // This week
       if (log.timestamp >= startOfWeek.getTime() && log.timestamp < endOfWeek.getTime()) {
         completedCountThisWeek++
@@ -186,15 +186,15 @@ const FocusHistoryCard = ({
 
   return (
     <section className="card card-hover p-6 relative overflow-hidden flex flex-col gap-6">
-      {/* Ambient background */}
+
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(circle at 100% 0%, rgba(139,92,246,0.03) 0%, transparent 60%)' }}
       />
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200/50 to-transparent" />
-      
-      {/* Header */}
+
+
       <div className="flex items-start justify-between relative z-10">
         <div className="flex items-center gap-3">
           <IconBadge name="timer" bg="bg-violet-50" icon="text-violet-600" badgeSize="w-9 h-9" />
@@ -262,7 +262,7 @@ const FocusHistoryCard = ({
 
       {!isLoading && !error && hasLogs && (
         <div className="flex flex-col gap-6 relative z-10">
-          {/* Summary Metrics */}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3.5 rounded-xl bg-violet-50/60 border border-violet-100/60 flex flex-col justify-center relative">
               <div className="absolute top-3 right-3 text-violet-300">
@@ -289,12 +289,12 @@ const FocusHistoryCard = ({
             </div>
           </div>
 
-          {/* Activity Chart & Insight */}
+
           <div className="bg-stone-50/50 rounded-xl border border-stone-100/80 p-5 relative overflow-hidden">
-            {/* Dashed Grid Lines */}
+
             <div className="absolute inset-x-5 top-8 border-t border-dashed border-stone-200" />
             <div className="absolute inset-x-5 top-[4.5rem] border-t border-dashed border-stone-200" />
-            
+
             <div className="flex items-end justify-between h-24 gap-2 mb-4 relative z-10">
               {chartData.map(d => {
                 const heightPct = Math.max(0, (d.minutes / maxChartMins) * 100)
@@ -321,7 +321,7 @@ const FocusHistoryCard = ({
             </div>
           </div>
 
-          {/* Recent Sessions */}
+
           <div>
             <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3 px-1">Recent sessions</h3>
             <div className="space-y-2">
@@ -330,7 +330,7 @@ const FocusHistoryCard = ({
                   <div className="w-8 h-8 rounded-full bg-violet-50 flex items-center justify-center shrink-0 text-violet-500">
                     <StudyIcon name="timer" size={14} />
                   </div>
-                  
+
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-stone-700 truncate" title={log.taskTitle}>
                       {log.taskTitle}
@@ -339,7 +339,7 @@ const FocusHistoryCard = ({
                       {formatDateTime(log.timestamp)}
                     </p>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-1 rounded-md">
                       {formatDuration(log.focusMinutes)}

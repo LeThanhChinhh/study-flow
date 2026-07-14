@@ -1,5 +1,7 @@
 package com.studyflow.core.services;
 
+import com.studyflow.core.dtos.auth.LoginRequest;
+import com.studyflow.core.dtos.auth.RegisterRequest;
 import com.studyflow.core.dtos.auth.UpdateUsernameRequest;
 import com.studyflow.core.dtos.auth.UserProfileResponse;
 import com.studyflow.core.entities.User;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,6 +48,27 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
+    void registerRejectsDuplicateUsernameAsConflict() {
+        RegisterRequest request = new RegisterRequest("taken_name", "new@example.com", "Password1!");
+        when(userRepository.existsByUsernameIgnoreCase("taken_name")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Username already exists");
+    }
+
+    @Test
+    void loginRejectsInvalidCredentialsAsUnauthorizedError() {
+        LoginRequest request = new LoginRequest("missing@example.com", "Password1!");
+        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameIgnoreCase("missing@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage("Invalid credentials");
+    }
+
+    @Test
     void updateUsernameUpdatesCurrentUser() {
         UUID userId = UUID.randomUUID();
         User user = user(userId, "old_name");
@@ -52,7 +76,7 @@ class AuthServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.existsByUsernameIgnoreCaseAndIdNot("new_name", userId)).thenReturn(false);
-        when(userRepository.save(user)).thenReturn(user);
+        when(userRepository.saveAndFlush(user)).thenReturn(user);
 
         UserProfileResponse response = authService.updateUsername(
                 authentication,
@@ -61,7 +85,7 @@ class AuthServiceTest {
 
         assertThat(response.username()).isEqualTo("new_name");
         assertThat(user.getUsername()).isEqualTo("new_name");
-        verify(userRepository).save(user);
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test
@@ -80,7 +104,7 @@ class AuthServiceTest {
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Username already exists");
 
-        verify(userRepository, never()).save(user);
+        verify(userRepository, never()).saveAndFlush(user);
     }
 
     private static Authentication authenticatedAs(UUID userId) {

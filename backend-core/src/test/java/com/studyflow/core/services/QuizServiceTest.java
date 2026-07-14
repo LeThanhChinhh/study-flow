@@ -1,6 +1,7 @@
 package com.studyflow.core.services;
 
 import com.studyflow.core.dtos.quiz.QuizReviewResponse;
+import com.studyflow.core.dtos.quiz.QuizSubmitRequest;
 import com.studyflow.core.entities.Quiz;
 import com.studyflow.core.entities.QuizAttempt;
 import com.studyflow.core.entities.QuizOption;
@@ -31,6 +32,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +79,29 @@ class QuizServiceTest {
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void submitQuizRejectsPartialTaskSubmission() {
+        UUID taskId = UUID.randomUUID();
+        Task task = task(taskId, userId, "Review graph traversal");
+        Quiz firstQuiz = quiz(task, "Which structure does BFS use?", OffsetDateTime.now().minusMinutes(2));
+        Quiz secondQuiz = quiz(task, "What does DFS explore first?", OffsetDateTime.now().minusMinutes(1));
+        QuizOption selectedOption = option(firstQuiz, "Queue", true);
+
+        QuizSubmitRequest request = new QuizSubmitRequest(
+                List.of(new QuizSubmitRequest.AnswerDTO(firstQuiz.getId(), selectedOption.getId())),
+                true
+        );
+
+        when(quizRepository.findAllById(any())).thenReturn(List.of(firstQuiz));
+        when(quizRepository.findByTaskId(taskId)).thenReturn(List.of(firstQuiz, secondQuiz));
+
+        assertThatThrownBy(() -> quizService.submitQuiz(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("All quiz questions for the task must be answered");
+
+        verifyNoInteractions(quizAttemptRepository);
     }
 
     @Test

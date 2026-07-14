@@ -21,6 +21,9 @@ import java.util.UUID;
 @Service
 public class PomodoroLogService {
 
+    private static final int MAX_FOCUS_MINUTES = 90;
+    private static final int MAX_BREAK_MINUTES = 30;
+    private static final int MAX_PAUSE_COUNT = 100;
     private static final Set<String> VALID_STATUSES = Set.of(
             "IN_PROGRESS",
             "COMPLETED",
@@ -62,6 +65,10 @@ public class PomodoroLogService {
             startTime = endTime.minusMinutes(focusMinutes);
         } else if (endTime == null) {
             endTime = startTime.plusMinutes(focusMinutes);
+        }
+
+        if (endTime.isBefore(startTime)) {
+            throw new IllegalArgumentException("endTime must not be before startTime");
         }
 
         PomodoroLog log = new PomodoroLog();
@@ -125,13 +132,18 @@ public class PomodoroLogService {
         if (request.getFocusMinutes() == null || request.getFocusMinutes() <= 0) {
             throw new IllegalArgumentException("focusMinutes must be greater than 0");
         }
-
-        if (request.getBreakMinutes() != null && request.getBreakMinutes() < 0) {
-            throw new IllegalArgumentException("breakMinutes must be greater than or equal to 0");
+        if (request.getFocusMinutes() > MAX_FOCUS_MINUTES) {
+            throw new IllegalArgumentException("focusMinutes must not exceed 90");
         }
 
-        if (request.getPauseCount() != null && request.getPauseCount() < 0) {
-            throw new IllegalArgumentException("pauseCount must be greater than or equal to 0");
+        if (request.getBreakMinutes() != null
+                && (request.getBreakMinutes() < 0 || request.getBreakMinutes() > MAX_BREAK_MINUTES)) {
+            throw new IllegalArgumentException("breakMinutes must be between 0 and 30");
+        }
+
+        if (request.getPauseCount() != null
+                && (request.getPauseCount() < 0 || request.getPauseCount() > MAX_PAUSE_COUNT)) {
+            throw new IllegalArgumentException("pauseCount must be between 0 and 100");
         }
 
         if (request.getStatus() != null && !VALID_STATUSES.contains(request.getStatus())) {

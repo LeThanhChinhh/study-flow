@@ -37,7 +37,7 @@ const getDeadlineContext = (goal) => {
   if (goal.status === 'COMPLETED') {
     return { label: 'Completed', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
   }
-  
+
   const deadlineDate = parseLocalDate(goal.deadline);
   if (!deadlineDate) {
     return { label: 'No deadline', color: 'text-stone-500 bg-stone-50 border-stone-200' };
@@ -79,7 +79,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
           getGoals(),
           getTasks()
         ]);
-        
+
         setGoals(goalsData || []);
         setTasks(tasksData || []);
       } catch (err) {
@@ -118,7 +118,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
   const goalsWithStats = useMemo(() => {
     return goals.map(goal => {
       const goalTasks = tasks.filter(t => t.goalId === goal.id);
-      
+
       // Sort tasks by scheduledDate, then orderIndex/startTime
       goalTasks.sort((a, b) => {
         const dateA = a.scheduledDate || '9999-12-31';
@@ -147,10 +147,10 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      
+
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Header */}
+
+
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/50">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
@@ -158,7 +158,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
             </div>
             <h2 className="text-base font-semibold text-stone-800">My Goals</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-colors"
           >
@@ -166,7 +166,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
           </button>
         </div>
 
-        {/* Content */}
+
         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-stone-50/30">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3 text-stone-400">
@@ -194,10 +194,10 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
 
                 return (
                   <div key={goal.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:border-violet-200">
-                    {/* Goal Header */}
+
                     <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      {/* Clickable main area to expand */}
-                      <button 
+
+                      <button
                         className="flex-1 text-left min-w-0 focus:outline-none"
                         onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
                       >
@@ -212,11 +212,11 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
                             <StudyIcon name="calendar" size={12} />
                             {formatDateToShort(goal.startDate) || 'No start date'} → {formatDateToShort(goal.deadline) || 'No deadline'}
                           </span>
-                          
+
                           {(() => {
                             const context = getDeadlineContext(goal);
                             return (
-                              <span 
+                              <span
                                 className={`flex items-center gap-1.5 px-2 py-0.5 rounded border font-medium ${context.color}`}
                                 aria-label={`Deadline status: ${context.label}`}
                               >
@@ -228,9 +228,9 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
                         </div>
                       </button>
 
-                      {/* Right side controls */}
+
                       <div className="flex items-center gap-4 shrink-0">
-                        {/* Progress */}
+
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex items-center gap-1.5 text-xs font-medium text-stone-700">
                             <span>{goal.progress}%</span>
@@ -239,7 +239,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
                             </span>
                           </div>
                           <div className="w-24 h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className="h-full bg-violet-500 rounded-full transition-all duration-500"
                               style={{ width: `${goal.progress}%` }}
                             />
@@ -248,7 +248,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
 
                         <div className="w-px h-8 bg-stone-200 hidden sm:block"></div>
 
-                        {/* Actions */}
+
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
@@ -261,7 +261,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
                             <StudyIcon name="calendar" size={14} />
                             <span className="hidden sm:inline ml-1">Schedule</span>
                           </button>
-                          
+
                           <button
                             onClick={() => {
                               setDeleteError(null);
@@ -331,7 +331,7 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
                       </div>
                     )}
 
-                    {/* Goal Tasks (Expanded) */}
+
                     {isExpanded && (
                       <div className="border-t border-stone-100 bg-stone-50/50 p-4">
                         <h4 className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-3 px-1">Tasks</h4>
@@ -386,10 +386,10 @@ const GoalOverviewModal = ({ onClose, onGoalDeleted }) => {
           )}
         </div>
 
-        {/* Footer */}
+
         <div className="px-6 py-4 border-t border-stone-100 bg-stone-50/50 flex justify-between items-center">
           <p className="text-xs text-stone-500">Manage goals and review their tasks</p>
-          <button 
+          <button
             onClick={() => { onClose(); navigate('/calendar'); }}
             className="btn-primary w-auto shrink-0 text-xs px-4 py-2 flex items-center gap-2"
           >

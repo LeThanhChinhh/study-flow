@@ -92,7 +92,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
   const isManualTask = task?.isAiGenerated === false
   const isAnyBusy = actionLoading !== null || isSaving || isReviewLoading
 
-  /* ── Escape key closes modal ─────────────────────────────────────────────── */
+  /*  Escape key closes modal  */
 
   useEffect(() => {
     if (!task) return undefined
@@ -113,7 +113,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
   const titleChanged = isManualTask && editForm.title.trim() !== (task?.title ?? '').trim()
   const hasAnyChanges = scheduleChanged || titleChanged
 
-  /* ── Status-only quick update (Pending / In Progress / Done) ────────────── */
+  /*  Status-only quick update (Pending / In Progress / Done)  */
 
   const handleStatusUpdate = async (newStatus) => {
     if (!task.id) return
@@ -132,7 +132,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     }
   }
 
-  /* ── Save schedule changes ───────────────────────────────────────────────── */
+  /*  Save schedule changes  */
 
   const handleSaveSchedule = async () => {
     if (!task.id) return
@@ -167,7 +167,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     }
   }
 
-  /* ── Reset edit form to current task values ─────────────────────────────── */
+  /*  Reset edit form to current task values  */
 
   const handleResetForm = () => {
     setEditForm(taskToForm(task))
@@ -175,7 +175,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     setSaveSuccess(false)
   }
 
-  /* ── Delete task ─────────────────────────────────────────────────────────── */
+  /*  Delete task  */
 
   const handleDeleteTask = async () => {
     if (!task.id || !isManualTask) return
@@ -194,7 +194,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     }
   }
 
-  /* ── Start Focus ─────────────────────────────────────────────────────────── */
+  /*  Start Focus  */
 
   const handleStartFocus = () => {
     if (!task.id) return
@@ -202,7 +202,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     navigate(`/focus?taskId=${task.id}`)
   }
 
-  /* ── Review saved quiz answers ─────────────────────────────────────────────── */
+  /*  Review saved quiz answers  */
 
   const handleReviewQuiz = async () => {
     if (!task.id || isReviewLoading) return
@@ -222,44 +222,44 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
     }
   }
 
-  /* ── Shared input class ──────────────────────────────────────────────────── */
+  /*  Shared input class  */
 
   const inputCls =
     'w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-violet-300 focus:bg-white focus:ring-1 focus:ring-violet-200 transition-all'
 
   return (
     <>
-      {/* ── Overlay ── */}
+
       <div
         className="fixed inset-0 z-40 bg-black/30"
         onClick={() => { if (!isAnyBusy && !isDeleting) onClose?.() }}
         aria-hidden="true"
       />
 
-      {/* ── Centered Modal Wrapper ── */}
+
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        {/* ── Modal panel ── */}
+
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="task-detail-title"
           className="pointer-events-auto w-full max-w-[440px] max-h-[88vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-stone-100"
         >
-          {/* Top drag-hint bar (mobile) */}
+
           <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-10 h-1 bg-stone-200 rounded-full" />
           </div>
 
-        {/* ── Header ── */}
+
         <div className="flex items-start justify-between gap-3 px-5 pt-3 pb-2 border-b border-stone-100 shrink-0">
           <div className="flex-1 min-w-0">
-            {/* Status badge */}
+
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2 ${cfg.badge}`}>
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} aria-hidden="true" />
               {cfg.label}
             </span>
 
-            {/* Task title */}
+
             <h2
               id="task-detail-title"
               className={`text-base font-bold text-stone-800 leading-snug break-words ${
@@ -269,7 +269,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
               {task.title}
             </h2>
 
-            {/* Module title */}
+
             {task.moduleTitle && (
               <p className="text-xs text-violet-600 font-medium mt-1 flex items-center gap-1">
                 <StudyIcon name="layers" size={11} className="text-violet-400 shrink-0" />
@@ -278,7 +278,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             )}
           </div>
 
-          {/* Close button */}
+
           <button
             type="button"
             onClick={onClose}
@@ -289,9 +289,9 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
           </button>
         </div>
 
-        {/* ── Scrollable Body ── */}
+
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {/* ── Quick edit: schedule ── */}
+
           {isManualTask && (
             <div className="px-5 pt-4 border-b border-stone-100 space-y-3 pb-3">
               <label className="block">
@@ -323,7 +323,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             Schedule
           </p>
 
-          {/* Date */}
+
           <label className="block">
             <span className="text-xs text-stone-500 font-medium mb-1 flex items-center gap-1">
               <StudyIcon name="calendar" size={11} className="text-stone-400" />
@@ -343,7 +343,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             />
           </label>
 
-          {/* Time row */}
+
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
               <span className="text-xs text-stone-500 font-medium mb-1 flex items-center gap-1">
@@ -383,7 +383,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             </label>
           </div>
 
-          {/* Inline form error */}
+
           {formError && (
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600">
               <StudyIcon name="alert-circle" size={12} className="text-red-400 shrink-0" />
@@ -391,7 +391,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             </div>
           )}
 
-          {/* Save success */}
+
           {saveSuccess && (
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-600">
               <StudyIcon name="check" size={12} className="text-emerald-500 shrink-0" strokeWidth={2.5} />
@@ -399,7 +399,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             </div>
           )}
 
-          {/* Save / Reset buttons */}
+
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -435,7 +435,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
           </div>
         </div>
 
-          {/* ── Status error ── */}
+
           {actionError && (
             <div className="mx-5 mt-3 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600 flex items-center gap-1.5">
               <StudyIcon name="alert-circle" size={12} className="text-red-400 shrink-0" />
@@ -443,10 +443,10 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             </div>
           )}
 
-          {/* ── Actions ── */}
+
           <div className="px-5 pt-3 pb-4 space-y-3">
 
-            {/* Start Focus */}
+
             {task.id && (
               <button
                 type="button"
@@ -476,7 +476,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
               </button>
             )}
 
-            {/* Status quick buttons */}
+
             <div>
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">
                 Status
@@ -517,7 +517,7 @@ const CalendarTaskDetailModal = ({ task, onClose, onTaskUpdated, onTaskDeleted }
             </div>
           </div>
         </div>
-          {/* ── Danger Section ── */}
+
           {isManualTask && (
             <div className="px-5 pt-3 pb-4">
 

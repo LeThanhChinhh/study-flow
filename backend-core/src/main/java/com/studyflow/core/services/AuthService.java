@@ -11,7 +11,9 @@ import com.studyflow.core.exceptions.ConflictException;
 import com.studyflow.core.repositories.UserRepository;
 import com.studyflow.core.repositories.UserSettingsRepository;
 import com.studyflow.core.security.JwtService;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.studyflow.core.dtos.auth.UserProfileResponse;
@@ -44,11 +46,11 @@ public class AuthService {
         String email = request.email().trim().toLowerCase();
 
         if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw new IllegalArgumentException("Username already exists");
+            throw new ConflictException("Username already exists");
         }
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
 
         User user = new User();
@@ -59,13 +61,17 @@ public class AuthService {
         user.setCurrentStreak(0);
         user.setHighestStreak(0);
 
-        User savedUser = userRepository.save(user);
+        try {
+            User savedUser = userRepository.saveAndFlush(user);
 
-        UserSettings settings = new UserSettings();
-        settings.setUser(savedUser);
-        userSettingsRepository.save(settings);
+            UserSettings settings = new UserSettings();
+            settings.setUser(savedUser);
+            userSettingsRepository.save(settings);
 
-        return AuthUserResponse.from(savedUser);
+            return AuthUserResponse.from(savedUser);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Username or email already exists");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +80,7 @@ public class AuthService {
 
         User user = userRepository.findByEmail(identifier.toLowerCase())
                 .or(() -> userRepository.findByUsernameIgnoreCase(identifier))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
         boolean passwordMatches = passwordEncoder.matches(
                 request.password(),
@@ -82,7 +88,7 @@ public class AuthService {
         );
 
         if (!passwordMatches) {
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new BadCredentialsException("Invalid credentials");
         }
 
         String accessToken = jwtService.generateToken(user);
@@ -113,8 +119,12 @@ public class AuthService {
         }
 
         user.setUsername(username);
-        User savedUser = userRepository.save(user);
-        return UserProfileResponse.from(savedUser);
+        try {
+            User savedUser = userRepository.saveAndFlush(user);
+            return UserProfileResponse.from(savedUser);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Username already exists");
+        }
     }
 
     @Transactional(readOnly = true)

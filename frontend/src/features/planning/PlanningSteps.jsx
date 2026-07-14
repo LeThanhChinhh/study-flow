@@ -5,7 +5,7 @@ import { formatTime12Hour, formatLocalDate, getDayOfWeekForDate } from './planni
 import { findInternalOverlap, findOverlap } from './timeSlotValidation'
 import EditablePlanStep from './EditablePlanStep'
 
-// ─── GoalStep ────────────────────────────────────────────────────────────────
+//  GoalStep 
 
 export const GoalStep = ({ goalForm, setGoalForm }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -42,7 +42,7 @@ export const GoalStep = ({ goalForm, setGoalForm }) => (
   </div>
 )
 
-// ─── TimeSlotsStep ────────────────────────────────────────────────────────────
+//  TimeSlotsStep 
 
 export const TimeSlotsStep = ({
   timeSlotsForm,
@@ -191,7 +191,7 @@ export const TimeSlotsStep = ({
   )
 }
 
-// ─── UploadStep ───────────────────────────────────────────────────────────────
+//  UploadStep 
 
 export const UploadStep = ({ fileForm, setFileForm }) => {
   const [isDragging, setIsDragging] = useState(false)
@@ -298,7 +298,7 @@ export const UploadStep = ({ fileForm, setFileForm }) => {
   )
 }
 
-// ─── PollingStep ──────────────────────────────────────────────────────────────
+//  PollingStep 
 
 export const PollingStep = ({ parsedMaterial, errorMsg }) => (
   <div className="space-y-4">
@@ -368,7 +368,7 @@ export const PollingStep = ({ parsedMaterial, errorMsg }) => (
   </div>
 )
 
-// ─── StepContent (router) ─────────────────────────────────────────────────────
+//  StepContent (router) 
 
 /**
  * Renders the appropriate step component based on the current step ID.

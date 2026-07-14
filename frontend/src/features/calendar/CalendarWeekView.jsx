@@ -35,7 +35,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, s
         isOver ? 'ring-2 ring-violet-400 ring-inset' : '',
       ].join(' ')}
     >
-      {/* Day header */}
+
       <div
         className={[
           'px-2 pt-2.5 pb-2 text-center border-b',
@@ -48,7 +48,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, s
           {dayName}
         </p>
 
-        {/* Day number circle */}
+
         <div className={[
           'inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold mx-auto',
           isToday
@@ -64,7 +64,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, s
           {monthAbb}
         </p>
 
-        {/* Task count chip */}
+
         {tasks.length > 0 && (
           <span className={`inline-block mt-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
             isToday
@@ -76,7 +76,7 @@ export const DayColumn = ({ date, tasks, isToday, onTaskClick, isMovingTaskId, s
         )}
       </div>
 
-      {/* Task list */}
+
       <div className="flex flex-col gap-1.5 p-2 flex-1 overflow-y-auto calendar-day-scroll">
         {sorted.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
@@ -117,7 +117,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selec
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
-      {/* Title + range + Dropdown */}
+
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
@@ -131,7 +131,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selec
           </div>
         </div>
 
-        {/* Goal Filter Dropdown */}
+
         {goals && goals.length > 0 && (
           <div className="flex items-center">
             <select
@@ -149,7 +149,7 @@ export const WeekNavHeader = ({ weekStart, onPrev, onNext, onToday, goals, selec
         )}
       </div>
 
-      {/* Nav controls */}
+
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -240,7 +240,7 @@ export const EmptyWeek = ({ onCreatePlan, onToday, isGoalFiltered, onClearGoalFi
       {isGoalFiltered ? "No tasks for this goal this week." : "No tasks scheduled this week"}
     </p>
     <p className="text-xs text-stone-400 mb-5 max-w-xs">
-      {isGoalFiltered 
+      {isGoalFiltered
         ? "Try looking at another week or view all goals."
         : "Navigate to another week or create a learning plan to fill your calendar."}
     </p>

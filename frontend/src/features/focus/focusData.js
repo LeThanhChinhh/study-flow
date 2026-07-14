@@ -1,7 +1,3 @@
-// Static support copy for the Focus Workspace page.
-// Replace with real API data in a later sprint.
-
-
 export const FOCUS_TIPS = [
   'Work on one problem at a time — depth beats breadth.',
   'Close every unrelated browser tab before starting.',
@@ -21,6 +17,3 @@ export const TODAY_TIP = FOCUS_TIPS[dayIndex % FOCUS_TIPS.length]
 
 export const POMODORO_MINUTES = 25
 export const POMODORO_SECONDS = POMODORO_MINUTES * 60
-
-//pomodoro with 10 seconds for testing
-//export const POMODORO_SECONDS = 10

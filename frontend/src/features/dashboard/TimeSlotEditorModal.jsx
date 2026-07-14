@@ -39,7 +39,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
       setIsLoading(true);
       setError(null);
       const data = await getTimeSlots();
-      
+
       // Sort: dayOfWeek ascending, then startTime ascending
       const sorted = [...(data || [])].sort((a, b) => {
         if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
@@ -147,10 +147,10 @@ const TimeSlotEditorModal = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      
+
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Header */}
+
+
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/50">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
@@ -158,7 +158,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
             </div>
             <h2 className="text-base font-semibold text-stone-800">Edit Availability</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-colors"
           >
@@ -166,25 +166,25 @@ const TimeSlotEditorModal = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
+
         <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-stone-200">
-          
+
           <div className="bg-blue-50 border border-blue-100 text-blue-700 px-4 py-3 rounded-xl text-sm flex gap-3">
             <StudyIcon name="info" size={16} className="shrink-0 mt-0.5" />
             <p>
-              Changing availability affects future planning and calendar drag/drop validation. 
+              Changing availability affects future planning and calendar drag/drop validation.
               <strong> Existing tasks will not be moved automatically.</strong>
             </p>
           </div>
 
-          {/* Form */}
+
           <form onSubmit={handleSubmit} className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-4">
             <h3 className="text-sm font-medium text-stone-700">{editingId ? 'Edit Time Slot' : 'Add Time Slot'}</h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-stone-500">Day of Week</label>
-                <select 
+                <select
                   className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
                   value={formState.dayOfWeek}
                   onChange={e => setFormState({...formState, dayOfWeek: parseInt(e.target.value)})}
@@ -194,8 +194,8 @@ const TimeSlotEditorModal = ({ onClose }) => {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-stone-500">Start Time</label>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
                   value={formState.startTime}
                   onChange={e => setFormState({...formState, startTime: e.target.value})}
@@ -203,31 +203,31 @@ const TimeSlotEditorModal = ({ onClose }) => {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-stone-500">End Time</label>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
                   value={formState.endTime}
                   onChange={e => setFormState({...formState, endTime: e.target.value})}
                 />
               </div>
             </div>
-            
+
             {formError && (
               <p className="text-xs text-rose-500 font-medium">{formError}</p>
             )}
 
             <div className="flex gap-2 justify-end pt-2">
               {editingId && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={resetForm}
                   className="btn-ghost text-xs px-3 py-1.5"
                 >
                   Cancel
                 </button>
               )}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSaving}
                 className="btn-primary text-xs px-4 py-1.5"
               >
@@ -236,7 +236,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
             </div>
           </form>
 
-          {/* List */}
+
           <div>
             <h3 className="text-sm font-medium text-stone-700 mb-3">Current Availability</h3>
             {isLoading ? (
@@ -262,17 +262,17 @@ const TimeSlotEditorModal = ({ onClose }) => {
                             {toTimeInput(slot.startTime)} – {toTimeInput(slot.endTime)}
                           </div>
                         </div>
-                        
+
                         {!isPendingDelete && (
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={() => handleEdit(slot)}
                               className="px-2 py-1.5 text-xs font-medium text-stone-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors flex items-center gap-1.5"
                             >
                               <StudyIcon name="pencil" size={12} />
                               Edit
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleInitiateDelete(slot.id)}
                               className="px-2 py-1.5 text-xs font-medium text-stone-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1.5"
                             >
@@ -283,7 +283,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
                         )}
                       </div>
 
-                      {/* Inline Delete Confirmation */}
+
                       {isPendingDelete && (
                         <div className="mt-3 pt-3 border-t border-rose-100 flex flex-col gap-2 bg-rose-50/50 -mx-3 -mb-3 p-3 rounded-b-xl">
                           <div className="flex items-center justify-between">
@@ -316,7 +316,7 @@ const TimeSlotEditorModal = ({ onClose }) => {
               </div>
             )}
           </div>
-          
+
         </div>
       </div>
     </div>

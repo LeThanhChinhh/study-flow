@@ -8,7 +8,7 @@ import { useAuth } from '../auth/AuthContext'
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, isLoading, error, clearError } = useAuth()
-  
+
   const [formData, setFormData]         = useState({ identifier: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError]     = useState(null)
@@ -29,7 +29,7 @@ const LoginPage = () => {
       setLocalError("Please enter both identifier and password.")
       return
     }
-    
+
     try {
       await login(formData)
       navigate('/dashboard')
@@ -40,7 +40,7 @@ const LoginPage = () => {
 
   return (
     <AuthLayout>
-      {/* Header */}
+
       <header className="mb-7">
         <h1 className="text-2xl font-bold text-stone-800 tracking-tight mb-1.5">
           Welcome back
@@ -48,7 +48,7 @@ const LoginPage = () => {
         <p className="text-stone-500 text-sm">Continue your learning flow.</p>
       </header>
 
-      {/* Error Banner */}
+
       {(error || localError) && (
         <div className="mb-6 p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 flex items-start gap-2 animate-fade-in">
           <StudyIcon name="alert-circle" size={16} className="mt-0.5 shrink-0" />
@@ -56,10 +56,10 @@ const LoginPage = () => {
         </div>
       )}
 
-      {/* Form */}
+
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
-        {/* Identifier: email OR username */}
+
         <div>
           <label
             htmlFor="login-identifier"
@@ -80,7 +80,7 @@ const LoginPage = () => {
           />
         </div>
 
-        {/* Password */}
+
         <div>
           <label
             htmlFor="login-password"
@@ -111,7 +111,7 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* Submit */}
+
         <div className="pt-1">
           <button id="login-submit-btn" type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? 'Signing in...' : 'Continue learning'}
@@ -119,7 +119,7 @@ const LoginPage = () => {
         </div>
       </form>
 
-      {/* Switch to register */}
+
       <p className="mt-6 text-center text-sm text-stone-500">
         New to StudyFlow?{' '}
         <Link
@@ -130,7 +130,7 @@ const LoginPage = () => {
         </Link>
       </p>
 
-      {/* Legal */}
+
       <div className="mt-6 pt-6 border-t border-stone-100">
         <p className="text-xs text-stone-400 text-center leading-relaxed">
           By continuing, you agree to our{' '}

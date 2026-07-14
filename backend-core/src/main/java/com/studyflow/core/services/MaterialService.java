@@ -52,7 +52,7 @@ public class MaterialService {
             goalService.findOwnedGoal(goalId, authentication);
         }
 
-        validatePdfFile(file);
+        byte[] fileBytes = readAndValidatePdf(file);
 
         String fileName = normalizeFileName(file.getOriginalFilename());
         String jobId = UUID.randomUUID().toString();
@@ -65,13 +65,6 @@ public class MaterialService {
         material.setJobId(jobId);
         material.setStatus("PROCESSING");
 
-        byte[] fileBytes;
-        try {
-            fileBytes = file.getBytes();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read PDF file contents", e);
-        }
-        
         String contentType = file.getContentType();
 
         Material savedMaterial = materialRepository.saveAndFlush(material);
@@ -102,7 +95,7 @@ public class MaterialService {
         return MaterialStatusResponse.from(material);
     }
 
-    private void validatePdfFile(MultipartFile file) {
+    private byte[] readAndValidatePdf(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("PDF file is required");
         }
@@ -119,6 +112,37 @@ public class MaterialService {
         if (!hasPdfContentType && !hasPdfExtension) {
             throw new IllegalArgumentException("Only PDF files are supported");
         }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Failed to read PDF file", exception);
+        }
+
+        if (!hasPdfSignature(fileBytes)) {
+            throw new IllegalArgumentException("Invalid PDF file");
+        }
+
+        return fileBytes;
+    }
+
+    static boolean hasPdfSignature(byte[] fileBytes) {
+        if (fileBytes == null || fileBytes.length < 5) {
+            return false;
+        }
+
+        int searchLimit = Math.min(fileBytes.length - 4, 1024);
+        for (int index = 0; index < searchLimit; index++) {
+            if (fileBytes[index] == '%'
+                    && fileBytes[index + 1] == 'P'
+                    && fileBytes[index + 2] == 'D'
+                    && fileBytes[index + 3] == 'F'
+                    && fileBytes[index + 4] == '-') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String normalizeFileName(String originalFileName) {
