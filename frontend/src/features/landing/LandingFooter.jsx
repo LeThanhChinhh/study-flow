@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom'
-import StudyIcon from '../../components/StudyIcon'
 
 const LandingFooter = ({ isAuthenticated, isAuthReady }) => (
   <footer className="landing-footer">
     <div className="landing-footer-brand">
-      <span><StudyIcon name="layers" size={15} /></span>
+      <img src="/studyflow_logo.png" alt="StudyFlow" className="h-6 w-6 object-contain" />
       <div><strong>StudyFlow</strong><p>Built for focused learning.</p></div>
     </div>
 

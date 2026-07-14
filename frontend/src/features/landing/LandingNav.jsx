@@ -50,7 +50,7 @@ const LandingNav = ({ cta, isAuthenticated }) => {
     <header className="landing-nav-shell" data-landing-nav>
       <nav className="landing-nav" aria-label="Primary navigation">
         <a href="#main-content" className="landing-brand" onClick={closeMenu}>
-          <span><StudyIcon name="layers" size={16} /></span>
+          <img src="/studyflow_logo.png" alt="StudyFlow" className="h-6 w-6 object-contain" />
           <strong>StudyFlow</strong>
         </a>
 

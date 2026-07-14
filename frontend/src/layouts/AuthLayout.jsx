@@ -1,5 +1,4 @@
 import AppBackground from '../components/background/AppBackground'
-import StudyIcon from '../components/StudyIcon'
 
 const AuthLayout = ({ children }) => (
   <div className="min-h-screen relative flex flex-col items-center justify-center p-4">
@@ -7,9 +6,7 @@ const AuthLayout = ({ children }) => (
 
     <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center">
       <div className="mb-6 flex items-center gap-2.5 animate-fade-in">
-        <div className="w-8 h-8 bg-violet-600 rounded-xl flex items-center justify-center shadow-sm">
-          <StudyIcon name="layers" size={16} className="text-white" />
-        </div>
+        <img src="/studyflow_logo.png" alt="StudyFlow" className="h-8 w-8 object-contain" />
         <span className="text-xl font-bold text-stone-800 tracking-tight">StudyFlow</span>
       </div>
 

@@ -8,7 +8,6 @@ import PlanningPage from './pages/PlanningPage'
 import CalendarPage from './pages/CalendarPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PublicOnlyRoute from './routes/PublicOnlyRoute'
-import StudyIcon from './components/StudyIcon'
 import { useAuth } from './auth/AuthContext'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -16,9 +15,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const AppRouteLoader = () => (
   <div className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center p-4">
     <div className="flex flex-col items-center gap-4 animate-pulse">
-      <div className="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center shadow-sm">
-        <StudyIcon name="layers" size={24} className="text-white" />
-      </div>
+      <img src="/studyflow_logo.png" alt="StudyFlow" className="h-12 w-12 object-contain" />
       <p className="text-sm font-medium text-stone-500 tracking-wide">Preparing StudyFlow...</p>
     </div>
   </div>

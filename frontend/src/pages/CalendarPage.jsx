@@ -304,9 +304,7 @@ const CalendarPage = () => {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
 
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-sm">
-              <StudyIcon name="layers" size={15} className="text-white" />
-            </div>
+            <img src="/studyflow_logo.png" alt="StudyFlow" className="h-8 w-8 object-contain" />
             <span className="text-stone-800 text-base font-bold tracking-tight">StudyFlow</span>
           </div>
 
